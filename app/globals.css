@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+/* Minimal test to prove Tailwind is running via PostCSS */
+html, body { height: 100%; }
+body { @apply bg-black text-white antialiased; }

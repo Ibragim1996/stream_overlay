@@ -1,0 +1,9 @@
+# .eslintignore
+node_modules/
+.next/
+out/
+dist/
+coverage/
+public/
+*.log
+**/*.d.ts
