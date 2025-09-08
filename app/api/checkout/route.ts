@@ -1,70 +1,62 @@
 // app/api/checkout/route.ts
-import type { NextRequest } from 'next/server';
-import Stripe from 'stripe';
+import { NextRequest } from 'next/server';
+import { stripe, PRICE_PRO_MONTH } from '@/lib/stripe';
+import { getAdminAuth } from '@/lib/firebaseAdmin';
 
-export const runtime = 'nodejs';        // Stripe требует Node runtime
-export const dynamic = 'force-dynamic'; // не кешировать
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
-const PRICE_MONTHLY     = process.env.STRIPE_PRICE_MONTHLY || '';
-const PRICE_YEARLY      = process.env.STRIPE_PRICE_YEARLY  || '';
-const APP_URL =
-  (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')
-    ? process.env.NEXT_PUBLIC_APP_URL
-    : '') || '';
-
-if (!STRIPE_SECRET_KEY) {
-  console.error('[checkout] Missing STRIPE_SECRET_KEY in .env.local');
-}
-
-// ВАЖНО: не передаём apiVersion — пусть SDK использует версию пакета
-const stripe = new Stripe(STRIPE_SECRET_KEY);
-
-function json(data: any, init?: number | ResponseInit) {
-  return new Response(JSON.stringify(data), {
-    status: typeof init === 'number' ? init : init?.status ?? 200,
+const json = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), {
+    status,
     headers: { 'content-type': 'application/json; charset=utf-8' },
   });
-}
 
 export async function POST(req: NextRequest) {
   try {
-    if (!STRIPE_SECRET_KEY) {
-      return json({ ok: false, error: 'Server misconfigured: STRIPE_SECRET_KEY' }, 500);
+    // 1) достаём Bearer токен
+    const auth = req.headers.get('authorization') || req.headers.get('Authorization') || '';
+    const m = auth.match(/^Bearer\s+(.+)$/i);
+    if (!m) return json({ error: 'unauthorized' }, 401);
+    const idToken = m[1].trim();
+
+    // 2) проверяем через Firebase Admin (через ленивый геттер)
+    const adminAuth = getAdminAuth();
+    const decoded = await adminAuth.verifyIdToken(idToken);
+    const uid = decoded.uid;
+    const email = decoded.email ?? undefined;
+
+    // 3) ищем/создаём Customer в Stripe
+    let customerId: string | undefined;
+    if (email) {
+      const { data } = await stripe.customers.list({ email, limit: 1 });
+      if (data.length) {
+        customerId = data[0].id;
+        await stripe.customers.update(customerId, { metadata: { firebaseUid: uid } });
+      }
+    }
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email,
+        metadata: { firebaseUid: uid },
+      });
+      customerId = customer.id;
     }
 
-    const body = await req.json().catch(() => ({} as any));
-    const plan = (body?.plan === 'yearly' ? 'yearly' : 'monthly') as 'monthly' | 'yearly';
-
-    const priceId = plan === 'yearly' ? PRICE_YEARLY : PRICE_MONTHLY;
-    if (!priceId) {
-      return json({ ok: false, error: `Missing price ID for ${plan}. Set STRIPE_PRICE_${plan.toUpperCase()}.` }, 500);
-    }
-
-    // Надёжно определяем origin
-    const origin =
-      APP_URL ||
-      req.headers.get('origin') ||
-      `${req.nextUrl.protocol}//${req.nextUrl.host}` ||
-      'http://localhost:3000';
-
+    // 4) создаём Checkout Session
+    const origin = req.headers.get('origin') || req.nextUrl.origin;
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/premium?status=success`,
-      cancel_url: `${origin}/premium?status=cancel`,
+      customer: customerId,
+      client_reference_id: uid,
+      line_items: [{ price: PRICE_PRO_MONTH, quantity: 1 }],
       allow_promotion_codes: true,
-      billing_address_collection: 'auto',
-      automatic_tax: { enabled: false },
-      metadata: { plan },
+      success_url: `${origin}/account/billing?success=1`,
+      cancel_url: `${origin}/account/billing?canceled=1`,
     });
 
-    if (!session.url) {
-      return json({ ok: false, error: 'Stripe did not return a Checkout URL' }, 500);
-    }
     return json({ ok: true, url: session.url });
   } catch (e: any) {
-    console.error('[checkout] error:', e);
-    return json({ ok: false, error: e?.message ?? 'checkout_failed' }, 500);
+    return json({ ok: false, error: e?.message || 'server_error' }, 500);
   }
 }

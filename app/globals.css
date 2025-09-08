@@ -1,5 +1,7 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Minimal test to prove Tailwind is running via PostCSS */
+/* Smoke-test: фон чёрный, текст белый */
 html, body { height: 100%; }
 body { @apply bg-black text-white antialiased; }

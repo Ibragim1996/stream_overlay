@@ -1,15 +1,8 @@
 // lib/bus.ts
-import { redis } from '@/lib/redis';
+import { getRedis, channelNameForToken } from '@/lib/redis';
 import type { Mode, TaskType, StreamKind } from '@/lib/mode';
 
-
-/** Канал для конкретного overlay по токену */
-export function channelNameForToken(token: string): string {
-  return `overlay:${token}`;
-}
-
-
-// Event types
+// События оверлея
 export type OverlayTaskEvent = {
   type: 'task';
   line: string;
@@ -19,45 +12,45 @@ export type OverlayTaskEvent = {
   name?: string;
   ts: number;
 };
-
 export type OverlayAudienceEvent = {
   type: 'audience';
   payload: { audience: string };
   ts: number;
 };
-
 export type OverlayMessageEvent = {
   type: 'message';
   payload: Record<string, unknown>;
   ts: number;
 };
 
-export type OverlayEvent = OverlayTaskEvent | OverlayAudienceEvent | OverlayMessageEvent;
+export type BusEvent = OverlayTaskEvent | OverlayAudienceEvent | OverlayMessageEvent;
 
-/**
- * Кладём событие в очередь канала.
- * Здесь используем LPUSH + EXPIRE; потребитель читает как список.
- * При желании можно заменить на pub/sub/stream — интерфейс тот же.
- */
-export async function enqueue(channel: string, ev: OverlayEvent): Promise<void> {
-  const key = `bus:${channel}`;
-  await redis.lpush(key, JSON.stringify(ev));
-  // держим хвост 200 событий и авто-очистку сутки
-  await redis.ltrim(key, 0, 199);
-  await redis.expire(key, 60 * 60 * 24);
+// Ключ в Redis
+const kBus = (channel: string) => `bus:${channel}`;
+
+/** Положить событие в очередь канала */
+export async function enqueue(channel: string, ev: BusEvent): Promise<void> {
+  const r = getRedis();
+  const key = kBus(channel);
+  await r.lpush(key, JSON.stringify(ev));
+  await r.ltrim(key, 0, 199);
+  await r.expire(key, 60 * 60 * 24);
 }
 
-// --- Stream API ---
-export type BusEvent = OverlayEvent;
-
-export function getRecent(channel: string, count: number): BusEvent[] {
-  // This is a stub. Replace with actual Redis logic if needed.
-  // For now, returns an empty array.
-  return [];
+/** Последние события канала (LPUSH хранит от новых к старым) */
+export async function recentEvents(channel: string, count = 50): Promise<BusEvent[]> {
+  const r = getRedis();
+  const key = kBus(channel);
+  const raw = (await r.lrange<string>(key, 0, Math.max(0, count - 1))) ?? [];
+  return raw
+    .map((s) => {
+      try { return JSON.parse(s) as BusEvent; } catch { return null; }
+    })
+    .filter((x): x is BusEvent => x !== null);
 }
 
-export function subscribe(channel: string, cb: (e: BusEvent) => void): () => void {
-  // This is a stub. Replace with actual pub/sub logic if needed.
-  // Returns an unsubscribe function.
-  return () => {};
-}
+// Экспортируем имя канала наружу (хеш по токену уже внутри lib/redis)
+export { channelNameForToken };
+
+// Алиас для совместимости со старым кодом
+export { recentEvents as getRecent };

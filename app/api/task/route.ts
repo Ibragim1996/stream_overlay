@@ -1,51 +1,78 @@
 // app/api/task/route.ts
 import { NextRequest } from 'next/server';
-import { redis } from '@/lib/redis';
-import { channelNameForToken, enqueue } from '@/lib/bus';
-import type { OverlayTaskEvent } from '@/lib/bus';
 import type { Mode, TaskType, StreamKind } from '@/lib/mode';
 
-// ---------- утилиты ----------
+// ...existing code...
+
+// --- Next/Vercel runtime hints ---
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+// ленивый импорт клиента Redis (не трогает env на билде)
+const redisL = async () => (await import('@/lib/redis')).getRedis();
+// ------------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------------
 const json = (data: unknown, init?: number | ResponseInit) =>
   new Response(JSON.stringify(data), {
     status: typeof init === 'number' ? init : init?.status ?? 200,
-    headers: { 'content-type': 'application/json; charset=utf-8' },
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'access-control-allow-origin': '*', // при желании замени на твой домен
+    },
   });
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'POST, OPTIONS',
+      'access-control-allow-headers': 'authorization, content-type',
+      'access-control-max-age': '600',
+    },
+  });
+}
 
 const NOW = () => Date.now();
 
-// ключи Redis
+// ------------------------------------------------------------------
+// Redis keys
+// ------------------------------------------------------------------
 const kRecent = (t: string) => `ovl:recent:${t}`;
-const kRate   = (t: string) => `rate:${t}:${Math.floor(Date.now()/60000)}`;
+const kRate   = (t: string) => `rate:${t}:${Math.floor(Date.now() / 60000)}`;
 
-// нормализация входных значений (поддержка старых названий из overlay)
+// ------------------------------------------------------------------
+/* Input normalization (с обратной совместимостью старых названий) */
+// ------------------------------------------------------------------
 type TaskTypeIn = TaskType | 'challenge' | 'joke' | 'just_talk';
 type StreamKindIn = StreamKind | 'just_chat' | 'gaming' | 'music' | 'cooking';
 
 function normMode(v: unknown): Mode {
-  const ok = new Set<Mode>(['funny','motivator','serious','chill','urban','edgy']);
+  const ok = new Set<Mode>(['funny', 'motivator', 'serious', 'chill', 'urban', 'edgy']);
   return ok.has(v as Mode) ? (v as Mode) : 'motivator';
 }
 function normTaskType(v: unknown): TaskType {
-  const s = String(v || '').toLowerCase() as TaskTypeIn;
+  const s = String(v ?? '').toLowerCase() as TaskTypeIn;
   if (s === 'question') return 'question';
   if (s === 'banter' || s === 'joke' || s === 'just_talk') return 'banter';
-  // 'challenge' и всё остальное сводим к базовому 'task'
-  return 'task';
+  return 'task'; // всё остальное → task (включая challenge)
 }
 function normStreamKind(v: unknown): StreamKind {
-  const s = String(v || '').toLowerCase() as StreamKindIn;
+  const s = String(v ?? '').toLowerCase() as StreamKindIn;
   if (s === 'irl') return 'irl';
   if (s === 'just_chat' || s === 'just_chatting') return 'just_chatting';
   return 'other';
 }
-function normLang(v: unknown): 'en'|'ru'|'es' {
-  const s = String(v || '').toLowerCase();
+function normLang(v: unknown): 'en' | 'ru' | 'es' {
+  const s = String(v ?? '').toLowerCase();
   if (s === 'ru' || s === 'es') return s;
   return 'en';
 }
 
-// анти-дубликатор (очень простой, но эффективный)
+// ------------------------------------------------------------------
+// Anti-duplicate scoring (простая, но действенная логика)
+// ------------------------------------------------------------------
 function normLine(s: string) {
   return s
     .toLowerCase()
@@ -63,59 +90,66 @@ function jaccard(a: string, b: string) {
   return inter / uni;
 }
 function pickDissimilar(cands: string[], recent: string[]) {
-  // убираем пустые и слишком короткие
   const pool = cands
-    .map(s => String(s || '').trim())
-    .filter(s => s.length >= 6);
-
+    .map((s) => String(s ?? '').trim())
+    .filter((s) => s.length >= 6);
   if (!pool.length) return '';
-
-  // среди кандидатов выберем тот, что минимально похож на недавние
   let best = pool[0];
   let bestScore = 1;
   for (const c of pool) {
-    const score = Math.max(...(recent.length ? recent.map(r => jaccard(c, r)) : [0]));
-    if (score < bestScore) { bestScore = score; best = c; }
+    const score = Math.max(...(recent.length ? recent.map((r) => jaccard(c, r)) : [0]));
+    if (score < bestScore) {
+      bestScore = score;
+      best = c;
+    }
   }
   return best;
 }
 
-// хранение последних N строк для анти-повтора
+// ------------------------------------------------------------------
+// Recent history in Redis
+// ------------------------------------------------------------------
 async function getRecent(token: string, limit = 12): Promise<string[]> {
-  const raw = await redis.lrange(kRecent(token), 0, limit - 1);
-  // Upstash возвращает string[]; ioredis тоже отдаст массив строк
-  return (raw as unknown as string[]) ?? [];
+  const redis = await redisL();
+  const raw = (await redis.lrange(kRecent(token), 0, limit - 1)) as unknown as string[] | null;
+  return raw ?? [];
 }
-
 async function pushRecent(token: string, line: string, keep = 24) {
+  const redis = await redisL();
   const key = kRecent(token);
   await redis.lpush(key, line);
   await redis.ltrim(key, 0, keep - 1);
   await redis.expire(key, 60 * 60 * 12); // 12h
 }
 
-// мягкий rate limit (20 req/min на токен)
 async function rateLimit(token: string, limitPerMin = 20) {
+  const redis = await redisL();
   const key = kRate(token);
-  const n = (await redis.incr(key)) as unknown as number;
+  const n = Number(await redis.incr(key));
   if (n === 1) await redis.expire(key, 60);
   return n <= limitPerMin;
 }
-// верификация токена (динамически берём verifyToken, если он есть)
-async function verifyBearer(bearer: string): Promise<{ ok: boolean; name?: string }> {
+
+// ------------------------------------------------------------------
+// Token verification (динамически тянем verifyToken, если есть)
+// ------------------------------------------------------------------
+type VerifyResult = { ok: boolean; name?: string };
+async function verifyBearer(bearer: string): Promise<VerifyResult> {
   try {
     const mod: any = await import('@/lib/token').catch(() => null);
     if (mod && typeof mod.verifyToken === 'function') {
-      const r = mod.verifyToken(bearer);
+      const r = await Promise.resolve(mod.verifyToken(bearer));
       return { ok: !!r?.ok, name: r?.name || '' };
     }
-  } catch {}
-  // fallback — допускаем любой непустой токен (на твой риск)
+  } catch { /* ignore */ }
+  // Прод-режим лучше сделать JWT/HMAC; пока допускаем любой непустой токен.
   return { ok: Boolean(bearer), name: '' };
 }
 
-// ---------- OpenAI ----------
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+// ------------------------------------------------------------------
+// OpenAI
+// ------------------------------------------------------------------
+const OPENAI_URL   = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
 type PromptArgs = {
@@ -127,20 +161,20 @@ type PromptArgs = {
   name?: string;
 };
 
-function toneInstruction(mode: Mode, lang: 'en'|'ru'|'es') {
+function toneInstruction(mode: Mode, lang: 'en' | 'ru' | 'es') {
   if (lang === 'ru') {
-    const ru: Record<Mode,string> = {
+    const ru: Record<Mode, string> = {
       funny: 'Лёгкий юмор, остроумно, без пошлости.',
       motivator: 'Поддерживай и заряжай энергией.',
       serious: 'Коротко, по делу, уверенно.',
       chill: 'Расслабленно и ненавязчиво.',
-      urban: 'Современный уличный сленг и ритм, TOS-safe (без оскорблений).',
+      urban: 'Современный уличный сленг, TOS-safe (без оскорблений).',
       edgy: 'Острее/подначивание, но без травли и оскорблений (TOS-safe).',
     };
     return ru[mode];
   }
   if (lang === 'es') {
-    const es: Record<Mode,string> = {
+    const es: Record<Mode, string> = {
       funny: 'Ligero y con humor, sin vulgaridad.',
       motivator: 'Apoya y da energía.',
       serious: 'Conciso y directo.',
@@ -150,7 +184,7 @@ function toneInstruction(mode: Mode, lang: 'en'|'ru'|'es') {
     };
     return es[mode];
   }
-  const en: Record<Mode,string> = {
+  const en: Record<Mode, string> = {
     funny: 'Playful, witty, no crudeness.',
     motivator: 'Supportive, energizing.',
     serious: 'Concise and focused.',
@@ -169,76 +203,74 @@ function buildPrompt(args: PromptArgs) {
   const audienceHint =
     taskType === 'banter'
       ? (lang === 'ru'
-          ? 'Иногда обращайся к зрителям 1-2 словами (напр. «чат, как думаете?»).'
+          ? 'Иногда обращайся к зрителям 1–2 словами (напр. «чат, как думаете?»).'
           : lang === 'es'
-          ? 'A veces dirígete a los espectadores en 1-2 palabras (p. ej., “chat, ¿qué opinan?”).'
-          : 'Sometimes address the viewers in 1-2 words (e.g., “chat, thoughts?”).')
+          ? 'A veces dirígete a los espectadores en 1–2 palabras (p. ej., “chat, ¿qué opinan?”).'
+          : 'Sometimes address the viewers in 1–2 words (e.g., “chat, thoughts?”).')
       : (lang === 'ru'
           ? 'Адресуй задание стримеру.'
           : lang === 'es'
           ? 'Dirige la tarea al streamer.'
           : 'Address the task to the streamer.');
-
   const style =
     taskType === 'question'
       ? (lang === 'ru'
-          ? 'Дай 1 *живой* вопрос с эмоцией, без клише, до 140 символов, без нумерации, БЕЗ кавычек, только строка.'
+          ? 'Дай 1 живой вопрос с эмоцией, без клише, ≤140 символов, без нумерации, БЕЗ кавычек, только строка.'
           : lang === 'es'
-          ? 'Da 1 pregunta *viva* con emoción, sin clichés, máx 140 caracteres, sin numeración, SIN comillas, solo una línea.'
-          : 'Give 1 *alive* question with emotion, no clichés, ≤140 chars, no numbering, NO quotes, one single line.')
+          ? 'Da 1 pregunta viva con emoción, máx 140 caracteres, sin numeración ni comillas, una sola línea.'
+          : 'Give 1 alive question with emotion, ≤140 chars, no numbering, NO quotes, single line.')
       : taskType === 'banter'
       ? (lang === 'ru'
-          ? 'Дай 1 реплику/подкол с юмором, до 140 символов, без нумерации и кавычек.'
+          ? 'Дай 1 реплику/подкол с юмором, ≤140 символов, без нумерации и кавычек.'
           : lang === 'es'
-          ? 'Da 1 línea/banter con humor, máx 140 caracteres, sin numeración ni comillas.'
+          ? 'Da 1 línea/banter con humor, máx 140, sin numeración ni comillas.'
           : 'Give 1 banter line with humor, ≤140 chars, no numbering, no quotes.')
       : (lang === 'ru'
-          ? 'Дай 1 конкретное микро-задание для стримера, до 140 символов, без нумерации и кавычек.'
+          ? 'Дай 1 конкретное микро-задание для стримера, ≤140 символов, без нумерации и кавычек.'
           : lang === 'es'
-          ? 'Da 1 micro-tarea concreta para el streamer, máx 140 caracteres, sin numeración ni comillas.'
+          ? 'Da 1 micro-tarea concreta para el streamer, máx 140, sin numeración ni comillas.'
           : 'Give 1 concrete micro-task for the streamer, ≤140 chars, no numbering, no quotes.');
-
   const avoid = recent.length
     ? (lang === 'ru'
-        ? `Избегай повторов по смыслу с недавними: ${recent.map(r=>`“${r}”`).join('; ')}.`
+        ? `Избегай повторов по смыслу с недавними: ${recent.map((r) => `«${r}»`).join('; ')}.`
         : lang === 'es'
-        ? `Evita solaparte con recientes: ${recent.map(r=>`“${r}”`).join('; ')}.`
+        ? `Evita solaparte con recientes: ${recent.map((r) => `«${r}»`).join('; ')}.`
         : `Avoid semantic duplicates of recent ones: ${recent.join(' | ')}`)
     : '';
-
   const streamHint =
     streamKind === 'irl'
       ? (lang === 'ru' ? 'Контекст: IRL (на ходу/на улице).' : lang === 'es' ? 'Contexto: IRL (en movimiento).' : 'Context: IRL (on the move).')
       : streamKind === 'just_chatting'
       ? (lang === 'ru' ? 'Контекст: Just Chatting (у стола, общение).' : lang === 'es' ? 'Contexto: Just Chatting (a cámara).' : 'Context: Just Chatting (at desk).')
       : (lang === 'ru' ? 'Контекст: разное.' : lang === 'es' ? 'Contexto: variado.' : 'Context: mixed.');
-
   const who =
-    name
+    name && name.trim()
       ? (lang === 'ru' ? `Имя стримера: ${name}.` : lang === 'es' ? `Nombre del streamer: ${name}.` : `Streamer name: ${name}.`)
       : '';
+  return [baseGuard, vibe, streamHint, audienceHint, style, avoid, who].filter(Boolean).join('\n');
+}
 
-  return [
-    baseGuard,
-    vibe,
-    streamHint,
-    audienceHint,
-    style,
-    avoid,
-    who,
-  ].filter(Boolean).join('\n');
+function sanitizeOneLine(s: string): string {
+  // убираем кавычки/маркеры списков, схлопываем пробелы, режем до 140
+  let out = s
+    .split('\n')
+    .map((x) => x.replace(/^\s*[\-\d\.\)\]]+\s*/, ''))
+    .join(' ')
+    .replace(/["“”‘’]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (out.length > 140) out = out.slice(0, 140).trim();
+  return out;
 }
 
 async function openaiOneLine(args: PromptArgs): Promise<string> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return '';
-
   const prompt = buildPrompt(args);
-
   const res = await fetch(OPENAI_URL, {
     method: 'POST',
     headers: {
-      'authorization': `Bearer ${key}`,
+      authorization: `Bearer ${key}`,
       'content-type': 'application/json',
     },
     body: JSON.stringify({
@@ -255,57 +287,71 @@ async function openaiOneLine(args: PromptArgs): Promise<string> {
       ],
     }),
   });
-
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
-    throw new Error(`openai_error ${res.status}: ${txt.slice(0,200)}`);
+    throw new Error(`openai_error ${res.status}: ${txt.slice(0, 200)}`);
   }
-  const data = await res.json();
-  const text = String(data?.choices?.[0]?.message?.content || '').trim();
-
-  // иногда модель может вернуть с нумерацией или несколькими строками — забираем первую достойную
-  const line = text
-    .split('\n')
-    .map(s => s.replace(/^\s*[\-\d\.\)\]]+\s*/, '').trim())
-    .filter(Boolean)[0] || '';
-
-  return line;
+  const data = await res.json().catch(() => ({}));
+  const raw = String(data?.choices?.[0]?.message?.content ?? '').trim();
+  return sanitizeOneLine(raw);
 }
 
-// запасной набор — когда нет ключа или случился fallback
+// ------------------------------------------------------------------
+// Fallback candidates (когда OpenAI недоступен)
+// ------------------------------------------------------------------
 const FALLBACK: string[] = [
-  "Chat, rate the streamer’s fit 1–10 — be honest.",
-  "Tell us your most controversial food take in 10s.",
-  "Pick one: sleep or grind — and why?",
-  "Show your phone lockscreen for 3 seconds 😏",
-  "Do a 7-word life advice, no more, no less.",
-  "Chat, drop one dare (PG-13) for the next minute.",
-  "Tell a tiny L you took this week.",
-  "If you vanished for a day — what’s the move?",
-  "Name one habit you’re trying to fix.",
-  "Give your best two-line roast of yourself."
+  "Chat, rate the streamer's fit 1–10 — be honest.",
+  'Tell us your most controversial food take in 10s.',
+  'Pick one: sleep or grind — and why?',
+  'Show your phone lockscreen for 3 seconds 😏',
+  'Do a 7-word life advice, no more, no less.',
+  'Chat, drop one dare (PG-13) for the next minute.',
+  'Tell a tiny L you took this week.',
+  'If you vanished for a day — what’s the move?',
+  "Name one habit you're trying to fix.",
+  'Give your best two-line roast of yourself.',
 ];
 
-// ---------- обработчик ----------
+// ------------------------------------------------------------------
+// Handler
+// ------------------------------------------------------------------
 type Body = {
   kind?: 'ping' | 'next';
   token?: string;
   mode?: Mode | string;
   taskType?: TaskTypeIn | string;
   streamKind?: StreamKindIn | string;
-  lang?: 'en'|'ru'|'es' | string;
+  lang?: 'en' | 'ru' | 'es' | string;
+};
+
+// локальный тип события, чтобы не импортировать bus типы на билде
+type OverlayTaskEventLocal = {
+  type: 'task';
+  line: string;
+  mode: Mode;
+  taskType: TaskType;
+  streamKind: StreamKind;
+  name?: string;
+  ts: number;
 };
 
 export async function POST(req: NextRequest) {
   try {
-    const raw: Body = await req.json().catch(() => ({} as Body));
-    const hdr = req.headers.get('authorization') || '';
-    const bearer = hdr.startsWith('Bearer ') ? hdr.slice(7) : (raw.token || '');
+    const raw: Body = (await req.json().catch(() => ({}))) as Body;
+
+    // Берём токен из заголовка или тела
+    const h1 = req.headers.get('authorization');
+    const h2 = req.headers.get('Authorization');
+    const hdr = h1 ?? h2 ?? '';
+    const bearer = hdr.toLowerCase().startsWith('bearer ')
+      ? hdr.slice(7).trim()
+      : (raw.token || '').trim();
 
     if (!bearer) return json({ ok: false, error: 'token_missing' }, 401);
 
     const v = await verifyBearer(bearer);
     if (!v.ok) return json({ ok: false, error: 'invalid_token' }, 401);
+
     const streamerName = v.name || '';
     const token = bearer;
 
@@ -323,10 +369,10 @@ export async function POST(req: NextRequest) {
       return json({ ok: true, name: streamerName, recent, mode, taskType, streamKind, lang });
     }
 
-    // next: получить недавние для анти-повтора
+    // kind === 'next'
     const recent = await getRecent(token, 12);
 
-    // пробуем OpenAI 3 раза, берём лучший по непохожести
+    // Пытаемся 3 раза OpenAI и выбираем наименее похожую строку
     const candidates: string[] = [];
     let openaiOk = true;
     for (let i = 0; i < 3; i++) {
@@ -341,37 +387,35 @@ export async function POST(req: NextRequest) {
 
     let line = pickDissimilar(candidates, recent);
 
-    // fallback если OpenAI не доступен/пусто
+    // Фоллбек при пустом результате/ошибке OpenAI
     if (!line) {
-      const f = [...FALLBACK].sort(() => Math.random() - 0.5);
-      line = pickDissimilar(f.slice(0, 5), recent) || f[0];
+      const shuffled = [...FALLBACK].sort(() => Math.random() - 0.5);
+      line = pickDissimilar(shuffled.slice(0, 5), recent) || shuffled[0];
+      line = sanitizeOneLine(line);
     }
 
-    // записываем в историю
     await pushRecent(token, line);
 
-    // публикуем событие в очередь оверлея
-    const channel = channelNameForToken(token);
-    const event: OverlayTaskEvent = {
-      type: 'task',
-      line,
-      mode,
-      taskType,
-      streamKind,
-      name: streamerName || undefined,
-      ts: NOW(),
-    };
-    await enqueue(channel, event);
+    // Публикация события в очередь (динамический импорт, чтобы не падать на билде)
+    let via: 'openai' | 'fallback' = openaiOk && candidates.length ? 'openai' : 'fallback';
+    try {
+      const { channelNameForToken, enqueue } = await import('@/lib/bus');
+      const event: OverlayTaskEventLocal = {
+        type: 'task',
+        line,
+        mode,
+        taskType,
+        streamKind,
+        name: streamerName || undefined,
+        ts: NOW(),
+      };
+      const channel = channelNameForToken(token);
+      await enqueue(channel, event as any);
+    } catch {
+      // не фейлим ответ — оверлей может опрашивать историю
+    }
 
-    return json({
-      ok: true,
-      task: line,
-      mode,
-      taskType,
-      streamKind,
-      lang,
-      via: openaiOk ? 'openai' : 'fallback',
-    });
+    return json({ ok: true, task: line, mode, taskType, streamKind, lang, via });
   } catch (e: any) {
     return json({ ok: false, error: e?.message || 'server_error' }, 500);
   }

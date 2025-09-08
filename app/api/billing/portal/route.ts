@@ -1,47 +1,73 @@
 // app/api/billing/portal/route.ts
 import { NextRequest } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { adminAuth } from '@/lib/firebaseAdmin';
+import { getAdminAuth } from '@/lib/firebaseAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const json = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+  });
+
+async function findCustomerIdByUidOrEmail(uid: string, email?: string | null) {
+  // 1) Пытаемся найти по metadata.firebaseUid (самый надёжный способ)
+  try {
+    const search = await stripe.customers.search({
+      // Stripe Search Query Language
+      query: `metadata['firebaseUid']:'${uid}' AND status:'active'`,
+      limit: 1,
+    });
+    if (search.data.length) return search.data[0].id;
+  } catch {
+    /* ignore */
+  }
+
+  // 2) Резервный путь — по email
+  if (email) {
+    const { data } = await stripe.customers.list({ email, limit: 1 });
+    if (data.length) return data[0].id;
+  }
+  return undefined;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const auth = req.headers.get('authorization') || '';
+    // Bearer <idToken> от Firebase
+    const auth = req.headers.get('authorization') || req.headers.get('Authorization') || '';
     const m = auth.match(/^Bearer\s+(.+)$/i);
-    if (!m) return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 });
+    if (!m) return json({ ok: false, error: 'unauthorized' }, 401);
+    const idToken = m[1].trim();
 
-    const idToken = m[1];
+    // verify Firebase
+    const adminAuth = getAdminAuth();
     const decoded = await adminAuth.verifyIdToken(idToken);
     const uid = decoded.uid;
-    const email = decoded.email ?? undefined;
+    const email = decoded.email ?? null;
 
-    // находим customer
-    let customerId: string | undefined;
-    if (email) {
-      const { data } = await stripe.customers.list({ email, limit: 1 });
-      if (data.length) customerId = data[0].id;
-    }
+    // ищем/создаём Customer
+    let customerId = await findCustomerIdByUidOrEmail(uid, email);
     if (!customerId) {
-      // fallback: поиск по метадате (дорого для больших списков, но ок на старте)
-      const list = await stripe.customers.list({ limit: 20 });
-      const found = list.data.find((c) => c.metadata?.firebaseUid === uid);
-      if (found) customerId = found.id;
-    }
-    if (!customerId) {
-      return new Response(JSON.stringify({ error: 'customer_not_found' }), { status: 404 });
+      const created = await stripe.customers.create({
+        email: email ?? undefined,
+        metadata: { firebaseUid: uid },
+      });
+      customerId = created.id;
+    } else {
+      // актуализируем metadata
+      await stripe.customers.update(customerId, { metadata: { firebaseUid: uid } });
     }
 
     const origin = req.headers.get('origin') || req.nextUrl.origin;
-    const portal = await stripe.billingPortal.sessions.create({
+    const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/account/billing`,
     });
 
-    return Response.json({ url: portal.url });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Stripe error';
-    return new Response(JSON.stringify({ error: msg }), { status: 500 });
+    return json({ ok: true, url: session.url });
+  } catch (e: any) {
+    return json({ ok: false, error: e?.message || 'server_error' }, 500);
   }
 }

@@ -1,56 +1,58 @@
 // app/api/events/route.ts
-import { NextRequest } from "next/server";
-import { channelNameForToken, enqueue } from "@/lib/bus";
+import { NextRequest } from 'next/server';
 
-export const runtime = "nodejs";
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-function json(data: unknown, init?: number | ResponseInit) {
-  return new Response(JSON.stringify(data), {
-    status: typeof init === "number" ? init : init?.status ?? 200,
-    headers: { "content-type": "application/json; charset=utf-8" },
+const json = (data: unknown, init?: number | ResponseInit) =>
+  new Response(JSON.stringify(data), {
+    status: typeof init === 'number' ? init : init?.status ?? 200,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'access-control-allow-origin': '*',
+    },
+  });
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'POST, OPTIONS',
+      'access-control-allow-headers': 'authorization, content-type',
+      'access-control-max-age': '600',
+    },
   });
 }
 
 export async function POST(req: NextRequest) {
   try {
-  const body = await req.json().catch(() => ({} as Record<string, unknown>));
-    const token =
-      body.token ||
-      req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
-      "";
+    const body = (await req.json().catch(() => ({}))) as Record<string, any>;
 
-    if (!token) return json({ ok: false, error: "token_missing" }, 400);
+    // токен из заголовка или тела
+    const hdr = req.headers.get('authorization') ?? req.headers.get('Authorization') ?? '';
+    const bearer =
+      hdr.toLowerCase().startsWith('bearer ') ? hdr.slice(7).trim() : String(body.token ?? '').trim();
+    if (!bearer) return json({ ok: false, error: 'token_missing' }, 401);
 
-    const channel = channelNameForToken(token);
-    if (body.type === 'task') {
-      const event = {
-        type: 'task' as const,
-        line: body.line || '',
-        mode: body.mode,
-        taskType: body.taskType,
-        streamKind: body.streamKind,
-        name: body.name,
-        ts: Date.now(),
-      };
-      enqueue(channel, event);
-    } else if (body.type === 'audience') {
-      const event = {
-        type: 'audience' as const,
-        payload: { audience: body.audience || 'all' },
-        ts: Date.now(),
-      };
-      enqueue(channel, event);
-    } else {
-      const event = {
-        type: 'message' as const,
-        payload: (body.payload && typeof body.payload === 'object') ? body.payload : {},
-        ts: Date.now(),
-      };
-      enqueue(channel, event);
-    }
+    const type = String(body.type ?? '').trim();
+    const payload = body.payload ?? {};
+    if (!type) return json({ ok: false, error: 'type_missing' }, 400);
+
+    // динамический импорт, чтобы ничего не выполнялось на импорте при билде
+    const { channelNameForToken, enqueue } = await import('@/lib/bus');
+
+    const event = {
+      type,
+      ...('audience' in body ? { audience: String(body.audience) } : {}),
+      payload,
+      ts: Date.now(),
+    };
+
+    await enqueue(channelNameForToken(bearer), event as any);
     return json({ ok: true });
-  } catch (e) {
-    const errorMsg = (e && typeof e === 'object' && 'message' in e) ? (e as { message?: string }).message : undefined;
-    return json({ ok: false, error: errorMsg || "server_error" }, 500);
+  } catch (e: any) {
+    return json({ ok: false, error: e?.message || 'server_error' }, 500);
   }
 }
