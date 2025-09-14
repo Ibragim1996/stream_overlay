@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Инструкция - Проверка обновлений</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(180deg, #0b1020 0%, #0c1226 100%);
+            color: #e6e9f2;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #e6e9f2, #8bd0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+        .section {
+            background: rgba(10, 14, 28, 0.95);
+            border: 1px solid #243058;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #8bd0ff;
+            margin: 0 0 20px 0;
+        }
+        .step {
+            background: rgba(12, 18, 38, 0.5);
+            border: 1px solid #243058;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .step h3 {
+            color: #8bd0ff;
+            margin: 0 0 10px 0;
+        }
+        .step p {
+            margin: 0;
+            color: #e6e9f2;
+        }
+        .link {
+            display: inline-block;
+            background: linear-gradient(135deg, #415cff, #8bd0ff);
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 500;
+            margin: 10px 10px 10px 0;
+            transition: all 0.2s;
+        }
+        .link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(65, 92, 255, 0.3);
+        }
+        .highlight {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(248, 113, 113, 0.1));
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .highlight h3 {
+            color: #fca5a5;
+            margin: 0 0 10px 0;
+        }
+        .highlight p {
+            color: #e6e9f2;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Проблема решена!</h1>
+            <p>Сервер перезапущен, кэш очищен, все обновления применены</p>
+        </div>
+
+        <div class="section">
+            <h2>✅ Что было исправлено:</h2>
+            
+            <div class="step">
+                <h3>1. Множественные серверы</h3>
+                <p>У вас было запущено ДВА Next.js сервера одновременно, что создавало конфликт. Все процессы остановлены и запущен только один сервер.</p>
+            </div>
+
+            <div class="step">
+                <h3>2. Кэш Next.js</h3>
+                <p>Очищен кэш сборки (.next папка) для применения всех изменений.</p>
+            </div>
+
+            <div class="step">
+                <h3>3. Сервер перезапущен</h3>
+                <p>Сервер запущен заново с чистым состоянием.</p>
+            </div>
+        </div>
+
+        <div class="highlight">
+            <h3>🚀 Теперь проверьте обновления:</h3>
+            <p>Все изменения должны быть видны! Откройте страницы ниже для проверки.</p>
+        </div>
+
+        <div class="section">
+            <h2>🔗 Ссылки для проверки:</h2>
+            
+            <div style="margin: 20px 0;">
+                <a href="/" class="link">🏠 Главная страница (кнопки в Header)</a>
+                <a href="/sign-in" class="link">📱 Страница входа (новый дизайн)</a>
+                <a href="/settings" class="link">⚙️ Настройки (новая страница)</a>
+                <a href="/test-buttons.html" class="link">🔧 Тест кнопок</a>
+                <a href="/premium" class="link">💎 Premium подписка</a>
+                <a href="/legal/privacy" class="link">🔒 Privacy Policy</a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🧪 Как проверить кнопки аутентификации:</h2>
+            
+            <div class="step">
+                <h3>1. Неавторизованный пользователь</h3>
+                <p>На главной странице в правом верхнем углу должна быть видна <strong>синяя кнопка "Sign in"</strong> с иконкой входа.</p>
+            </div>
+
+            <div class="step">
+                <h3>2. Войдите в систему</h3>
+                <p>Перейдите на страницу входа и войдите через Google или создайте аккаунт.</p>
+            </div>
+
+            <div class="step">
+                <h3>3. Найдите кнопки после входа</h3>
+                <p>После входа в правом верхнем углу должны появиться:</p>
+                <ul style="margin: 10px 0; padding-left: 20px; color: #e6e9f2;">
+                    <li><strong>Серая кнопка "Settings"</strong> - для перехода в настройки</li>
+                    <li><strong>Красная кнопка "Sign out"</strong> - для выхода из системы</li>
+                    <li><strong>Имя пользователя</strong> - отображается рядом с кнопками</li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <h3>4. Проверьте анимации</h3>
+                <p>При наведении на кнопки должны быть видны hover-эффекты и анимации.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Что должно быть видно:</h2>
+            
+            <div class="step">
+                <h3>Страница входа (/sign-in):</h3>
+                <p>• Градиентный логотип AI<br>
+                • Заголовок "Welcome to Seeko"<br>
+                • Поля ввода с иконками<br>
+                • Градиентная кнопка входа<br>
+                • Белая Google кнопка<br>
+                • Стеклянный эффект (backdrop-blur)</p>
+            </div>
+
+            <div class="step">
+                <h3>Кнопки в Header (после входа):</h3>
+                <p>• <strong>Settings:</strong> Серая кнопка с иконкой настроек<br>
+                • <strong>Sign Out:</strong> Красная кнопка с иконкой выхода<br>
+                • Имя пользователя рядом с кнопками<br>
+                • Hover-эффекты и анимации</p>
+            </div>
+
+            <div class="step">
+                <h3>Страница настроек (/settings):</h3>
+                <p>• Информация об аккаунте<br>
+                • Статус подписки<br>
+                • Настройки уведомлений<br>
+                • Переключатели предпочтений<br>
+                • Секция "Danger Zone"</p>
+            </div>
+        </div>
+
+        <div class="highlight">
+            <h3>⚠️ Если изменения всё ещё не видны:</h3>
+            <p>1. Нажмите <strong>Ctrl + F5</strong> (Windows/Linux) или <strong>Cmd + Shift + R</strong> (Mac) для жёсткого обновления<br>
+            2. Очистите кэш браузера<br>
+            3. Откройте страницу в режиме инкогнито</p>
+        </div>
+    </div>
+</body>
+</html>

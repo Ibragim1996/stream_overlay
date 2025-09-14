@@ -69,6 +69,11 @@ function normLang(v: unknown): 'en' | 'ru' | 'es' {
   if (s === 'ru' || s === 'es') return s;
   return 'en';
 }
+function normVoice(v: unknown): 'male' | 'female' | 'robot' {
+  const s = String(v ?? '').toLowerCase();
+  if (s === 'female' || s === 'robot') return s;
+  return 'male'; // default to male professional
+}
 
 // ------------------------------------------------------------------
 // Anti-duplicate scoring (простая, но действенная логика)
@@ -156,6 +161,7 @@ type PromptArgs = {
   mode: Mode;
   taskType: TaskType;
   streamKind: StreamKind;
+  voice: 'male' | 'female' | 'robot';
   lang: 'en' | 'ru' | 'es';
   recent: string[];
   name?: string;
@@ -195,11 +201,37 @@ function toneInstruction(mode: Mode, lang: 'en' | 'ru' | 'es') {
   return en[mode];
 }
 
+function voiceStyleInstruction(voice: 'male' | 'female' | 'robot', lang: 'en' | 'ru' | 'es') {
+  if (lang === 'ru') {
+    const ru: Record<string, string> = {
+      male: 'Мужской голос, уверенно и профессионально. Эмоционально и выразительно.',
+      female: 'Женский голос, дружелюбно и тепло. Эмоционально и выразительно.',
+      robot: 'Роботизированный голос, технично и четко. Современный AI-стиль.',
+    };
+    return ru[voice];
+  }
+  if (lang === 'es') {
+    const es: Record<string, string> = {
+      male: 'Voz masculina, confiada y profesional. Emocional y expresiva.',
+      female: 'Voz femenina, amigable y cálida. Emocional y expresiva.',
+      robot: 'Voz robótica, técnica y clara. Estilo AI moderno.',
+    };
+    return es[voice];
+  }
+  const en: Record<string, string> = {
+    male: 'Male voice, confident and professional. Emotional and expressive.',
+    female: 'Female voice, friendly and warm. Emotional and expressive.',
+    robot: 'Robotic voice, technical and clear. Modern AI style.',
+  };
+  return en[voice];
+}
+
 function buildPrompt(args: PromptArgs) {
-  const { mode, taskType, streamKind, lang, recent, name } = args;
+  const { mode, taskType, streamKind, voice, lang, recent, name } = args;
   const baseGuard =
     'Stay TOS-safe: no slurs, hate, harassment, explicit sexual content, dangerous acts, or glorifying illegal activity.';
   const vibe = toneInstruction(mode, lang);
+  const voiceStyle = voiceStyleInstruction(voice, lang);
   const audienceHint =
     taskType === 'banter'
       ? (lang === 'ru'
@@ -247,7 +279,7 @@ function buildPrompt(args: PromptArgs) {
     name && name.trim()
       ? (lang === 'ru' ? `Имя стримера: ${name}.` : lang === 'es' ? `Nombre del streamer: ${name}.` : `Streamer name: ${name}.`)
       : '';
-  return [baseGuard, vibe, streamHint, audienceHint, style, avoid, who].filter(Boolean).join('\n');
+  return [baseGuard, vibe, voiceStyle, streamHint, audienceHint, style, avoid, who].filter(Boolean).join('\n');
 }
 
 function sanitizeOneLine(s: string): string {
@@ -321,6 +353,7 @@ type Body = {
   mode?: Mode | string;
   taskType?: TaskTypeIn | string;
   streamKind?: StreamKindIn | string;
+  voice?: 'male' | 'female' | 'robot' | string;
   lang?: 'en' | 'ru' | 'es' | string;
 };
 
@@ -362,6 +395,7 @@ export async function POST(req: NextRequest) {
     const mode = normMode(raw.mode);
     const taskType = normTaskType(raw.taskType);
     const streamKind = normStreamKind(raw.streamKind);
+    const voice = normVoice(raw.voice);
     const lang = normLang(raw.lang);
 
     if (kind === 'ping') {
@@ -377,7 +411,7 @@ export async function POST(req: NextRequest) {
     let openaiOk = true;
     for (let i = 0; i < 3; i++) {
       try {
-        const line = await openaiOneLine({ mode, taskType, streamKind, lang, recent, name: streamerName });
+        const line = await openaiOneLine({ mode, taskType, streamKind, voice, lang, recent, name: streamerName });
         if (line) candidates.push(line);
       } catch {
         openaiOk = false;

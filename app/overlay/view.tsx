@@ -3,14 +3,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { MODE_OPTIONS, type Mode } from '@/lib/mode';
+import OverlayClient from './OverlayClient';
 
 type OverlayState = {
   mode?: Mode;
   seconds?: number;
   auto?: boolean;
-  voice?: boolean;
-  friend?: boolean;
-  streamKind?: 'just_chatting' | 'irl' | 'other';
+  voice?: string;
+  streamKind?: string;
 };
 
 function readSearch(): URLSearchParams {
@@ -46,6 +46,14 @@ export default function OverlayView() {
     const urlMode = readSearch().get('m') as Mode | null;
     return (urlMode && (MODE_OPTIONS.some(o => o.key === urlMode) ? urlMode : null)) ?? 'motivator';
   });
+  const [auto, setAuto] = useState(() => {
+    const urlAuto = readSearch().get('a');
+    return urlAuto === '1';
+  });
+  const [intervalSec, setIntervalSec] = useState(() => {
+    const urlSec = readSearch().get('s');
+    return urlSec ? parseInt(urlSec, 10) : 15;
+  });
 
   useEffect(() => {
     if (!token) return;
@@ -67,28 +75,10 @@ export default function OverlayView() {
   }
 
   return (
-    <div className="fixed left-3 bottom-3 z-[1000] rounded-2xl border border-[#243058] bg-[rgba(10,14,28,.88)] backdrop-blur px-3 py-2 text-xs text-[#e6e9f2]">
-      <div className="mb-1 opacity-80">Tone</div>
-      <div className="flex flex-wrap gap-2 max-w-[80vw]">
-        {MODE_OPTIONS.map(opt => {
-          const active = opt.key === mode;
-          return (
-            <button
-              key={opt.key}
-              title={opt.hint}
-              onClick={() => onChangeMode(opt.key)}
-              className={
-                'px-2 py-1 rounded-lg border transition ' +
-                (active
-                  ? 'bg-[#415cff] text-white border-transparent shadow'
-                  : 'bg-[#141a35] text-[#d3ddff] border-[#2a3a7a] hover:bg-[#182041]')
-              }
-            >
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <OverlayClient
+      mode={mode}
+      auto={auto}
+      intervalSec={intervalSec}
+    />
   );
 }

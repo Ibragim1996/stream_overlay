@@ -2,18 +2,18 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import RequireAuth from '@/app/components/RequireAuth';
 
 /** Тоны (режимы) для генерации задач */
 type Mode = 'funny' | 'motivator' | 'serious' | 'chill' | 'street';
 
-/** Типы стримов (сократили список) */
-type StreamKind = 'just_chatting' | 'irl' | 'cozy';
+/** Типы стримов - только Just Chatting */
+type StreamKind = 'just_chatting';
 
-export default function HomePage() {
+function HomePageContent() {
   // form state
   const [name, setName] = useState('');
   const [mode, setMode] = useState<Mode>('motivator');
-  const [streamKind, setStreamKind] = useState<StreamKind>('just_chatting');
   const [voiceOn, setVoiceOn] = useState(false);
   const [friendOn, setFriendOn] = useState(false);
   const [autoOn, setAutoOn] = useState(false);
@@ -66,7 +66,7 @@ export default function HomePage() {
       const q = new URLSearchParams({
         t: token,
         m: mode,                       // tone
-        st: streamKind,               // stream type
+        st: 'just_chatting',          // stream type - always just_chatting
         v: voiceOn ? '1' : '0',       // voice
         f: friendOn ? '1' : '0',      // friend
         a: autoOn ? '1' : '0',        // auto tasks
@@ -119,23 +119,6 @@ export default function HomePage() {
     );
   };
 
-  const StreamButton = (key: StreamKind, label: string, hint?: string) => {
-    const active = streamKind === key;
-    return (
-      <button
-        onClick={() => setStreamKind(key)}
-        className={`px-3 py-2 rounded-xl border text-sm transition ${
-          active
-            ? 'bg-[#19a974] text-white border-transparent shadow-md'
-            : 'bg-[#141a35] text-[#d3ddff] border-[#2a3a7a] hover:bg-[#182041]'
-        }`}
-        title={hint}
-        type="button"
-      >
-        {label}
-      </button>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#0b1020_0%,#0c1226_100%)] text-[#e6e9f2]">
@@ -153,7 +136,7 @@ export default function HomePage() {
         {/* left: setup */}
         <section className="md:col-span-3">
           <div className="rounded-2xl border border-[#243058] bg-[rgba(10,14,28,.88)] backdrop-blur p-5 md:p-6 shadow-[0_20px_60px_rgba(0,0,0,.45)]">
-            <div className="text-base opacity-80 mb-2">Streamer setup</div>
+                <div className="text-base opacity-80 mb-2">Streamer setup - HOT RELOAD TESTING</div>
 
             {/* name + generate */}
             <div className="flex flex-col sm:flex-row gap-3 mb-5">
@@ -230,15 +213,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* stream type */}
-            <div className="mb-4">
-              <div className="text-xs opacity-70 mb-2">Stream type</div>
-              <div className="flex flex-wrap gap-2">
-                {StreamButton('just_chatting', 'Just chatting', 'At desk / chatting with viewers')}
-                {StreamButton('irl', 'IRL', 'Outdoors / on the move')}
-                {StreamButton('cozy', 'Cozy', 'Chill vibe / focus / podcast-like')}
-              </div>
-            </div>
 
             {/* toggles + interval */}
             <div className="grid sm:grid-cols-3 gap-3">
@@ -287,10 +261,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      {/* footer */}
-      <footer className="max-w-6xl mx-auto px-5 pb-10 text-xs opacity-60">
-        © {new Date().getFullYear()} Seeko. All rights reserved.
-      </footer>
+      {/* footer removed - using layout footer */}
 
       {/* tiny toast */}
       <div
@@ -342,5 +313,13 @@ function Step({ n, title, text }: { n: string; title: string; text: string }) {
         <div className="text-xs opacity-70">{text}</div>
       </div>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <RequireAuth>
+      <HomePageContent />
+    </RequireAuth>
   );
 }

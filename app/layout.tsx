@@ -2,8 +2,8 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode, JSX } from 'react';
-import Link from 'next/link';
 import { Inter, JetBrains_Mono } from 'next/font/google';
+import Header from './components/Header';
 
 // Fonts as CSS variables (used in globals.css)
 const fontSans = Inter({ subsets: ['latin'], variable: '--font-geist-sans', display: 'swap' });
@@ -17,20 +17,20 @@ const appUrl =
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
-  title: { default: 'Seeko', template: '%s • Seeko' },
+  title: { default: 'SECO Overlay', template: '%s • SECO Overlay' },
   description: 'AI overlay for streamers.',
-  applicationName: 'Seeko',
-  keywords: ['Seeko', 'overlay', 'streaming', 'AI'],
+  applicationName: 'SECO Overlay',
+  keywords: ['SECO', 'overlay', 'streaming', 'AI'],
   openGraph: {
-    title: 'Seeko',
+    title: 'SECO Overlay',
     description: 'AI overlay for streamers.',
     url: '/',
-    siteName: 'Seeko',
+    siteName: 'SECO Overlay',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Seeko',
+    title: 'SECO Overlay',
     description: 'AI overlay for streamers.',
   },
   icons: {
@@ -47,44 +47,14 @@ export const viewport: Viewport = {
   ],
 };
 
-// Simple site header
-function Header(): JSX.Element {
-  return (
-    <header className="max-w-6xl mx-auto px-5 py-5 flex items-center justify-between">
-      <Link href="/" className="flex items-center gap-3">
-        <span className="inline-grid h-8 w-8 place-items-center rounded-xl bg-[#1e2a5d] border border-[#2a3a7a] text-xs font-bold">
-          AI
-        </span>
-        <span className="text-lg font-semibold tracking-wide">Seeko</span>
-      </Link>
-
-      <nav className="flex items-center gap-4 text-sm opacity-90">
-        <Link href="/premium" className="hover:opacity-100 opacity-80 font-semibold text-indigo-400">
-          Premium
-        </Link>
-        <Link href="/faq" className="hover:opacity-100 opacity-80">
-          FAQ
-        </Link>
-        <Link href="/help" className="hover:opacity-100 opacity-80">
-          Help
-        </Link>
-        <Link href="/legal/privacy" className="hover:opacity-100 opacity-80">
-          Privacy
-        </Link>
-        <Link href="/legal/terms" className="hover:opacity-100 opacity-80">
-          Terms
-        </Link>
-      </nav>
-    </header>
-  );
-}
+// Header component is now imported from ./components/Header
 
 // Simple site footer
 function Footer(): JSX.Element {
   const year = new Date().getFullYear();
   return (
     <footer className="max-w-6xl mx-auto px-5 py-10 text-xs opacity-60">
-      © {year} Seeko. All rights reserved.
+      © {year} SECO Overlay. All rights reserved.
     </footer>
   );
 }

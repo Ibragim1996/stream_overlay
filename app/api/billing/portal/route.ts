@@ -12,62 +12,44 @@ const json = (data: unknown, status = 200) =>
     headers: { 'content-type': 'application/json; charset=utf-8' },
   });
 
-async function findCustomerIdByUidOrEmail(uid: string, email?: string | null) {
-  // 1) Пытаемся найти по metadata.firebaseUid (самый надёжный способ)
-  try {
-    const search = await stripe.customers.search({
-      // Stripe Search Query Language
-      query: `metadata['firebaseUid']:'${uid}' AND status:'active'`,
-      limit: 1,
-    });
-    if (search.data.length) return search.data[0].id;
-  } catch {
-    /* ignore */
-  }
-
-  // 2) Резервный путь — по email
-  if (email) {
-    const { data } = await stripe.customers.list({ email, limit: 1 });
-    if (data.length) return data[0].id;
-  }
-  return undefined;
-}
-
 export async function POST(req: NextRequest) {
   try {
-    // Bearer <idToken> от Firebase
+    // 1) достаём Bearer токен
     const auth = req.headers.get('authorization') || req.headers.get('Authorization') || '';
     const m = auth.match(/^Bearer\s+(.+)$/i);
-    if (!m) return json({ ok: false, error: 'unauthorized' }, 401);
+    if (!m) return json({ error: 'unauthorized' }, 401);
     const idToken = m[1].trim();
 
-    // verify Firebase
+    // 2) проверяем через Firebase Admin
     const adminAuth = getAdminAuth();
     const decoded = await adminAuth.verifyIdToken(idToken);
     const uid = decoded.uid;
-    const email = decoded.email ?? null;
+    const email = decoded.email ?? undefined;
 
-    // ищем/создаём Customer
-    let customerId = await findCustomerIdByUidOrEmail(uid, email);
-    if (!customerId) {
-      const created = await stripe.customers.create({
-        email: email ?? undefined,
-        metadata: { firebaseUid: uid },
-      });
-      customerId = created.id;
-    } else {
-      // актуализируем metadata
-      await stripe.customers.update(customerId, { metadata: { firebaseUid: uid } });
+    if (!email) {
+      return json({ error: 'no_email' }, 400);
     }
 
+    // 3) ищем Customer в Stripe
+    const { data } = await stripe.customers.list({ email, limit: 1 });
+    
+    if (!data.length) {
+      return json({ error: 'no_customer' }, 400);
+    }
+
+    const customer = data[0];
+
+    // 4) создаём Portal Session
     const origin = req.headers.get('origin') || req.nextUrl.origin;
     const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${origin}/account/billing`,
+      customer: customer.id,
+      return_url: `${origin}/premium`,
     });
 
     return json({ ok: true, url: session.url });
-  } catch (e: any) {
-    return json({ ok: false, error: e?.message || 'server_error' }, 500);
+
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'server_error';
+    return json({ ok: false, error: message }, 500);
   }
 }

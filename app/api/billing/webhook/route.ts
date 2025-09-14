@@ -72,14 +72,42 @@ export async function POST(req: NextRequest) {
       break;
     }
 
+    /** Подписка обновлена */
+    case 'customer.subscription.updated': {
+      const obj = event.data.object;
+      if (!isSubscription(obj)) break;
+
+      const sub = obj;
+      
+      // Находим customer по email или metadata
+      const customer = await stripe.customers.retrieve(sub.customer as string);
+      const uid = typeof customer === 'object' && customer.metadata?.firebaseUid 
+        ? customer.metadata.firebaseUid 
+        : undefined;
+
+      if (uid) {
+        await setJSON(`sub:${uid}`, {
+          status: sub.status,
+          priceId: getPriceId(sub),
+          currentPeriodEnd: hasCurrentPeriodEnd(sub) ? sub.current_period_end : null,
+          cancelAtPeriodEnd: sub.cancel_at_period_end || false,
+        });
+      }
+      break;
+    }
+
     /** Подписка удалена/отменена */
     case 'customer.subscription.deleted': {
       const obj = event.data.object;
-      if (!isSubscription(obj)) break; // на всякий случай
+      if (!isSubscription(obj)) break;
 
       const sub = obj;
-      const uid =
-        typeof sub.metadata?.userId === 'string' ? sub.metadata.userId : undefined;
+      
+      // Находим customer по email или metadata
+      const customer = await stripe.customers.retrieve(sub.customer as string);
+      const uid = typeof customer === 'object' && customer.metadata?.firebaseUid 
+        ? customer.metadata.firebaseUid 
+        : undefined;
 
       if (uid) {
         await setJSON(`sub:${uid}`, {

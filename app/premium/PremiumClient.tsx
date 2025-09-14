@@ -16,16 +16,79 @@ if (!getApps().length) initializeApp(firebaseConfig);
 
 type Plan = 'monthly' | 'yearly';
 
+interface SubscriptionStatus {
+  status: string;
+  plan: string | null;
+  currentPeriodEnd: number | null;
+  isActive: boolean;
+  isMonthly: boolean;
+  isYearly: boolean;
+}
+
 export default function PremiumClient() {
   const sp = useSearchParams();
   const [busy, setBusy] = useState<Plan | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [isAuthed, setIsAuthed] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const un = onAuthStateChanged(getAuth(), (u) => setIsAuthed(!!u));
+    const un = onAuthStateChanged(getAuth(), (u) => {
+      setIsAuthed(!!u);
+      if (u) {
+        fetchSubscriptionStatus(u);
+      } else {
+        setSubscription(null);
+        setLoading(false);
+      }
+    });
     return () => un();
   }, []);
+
+  async function fetchSubscriptionStatus(user: any) {
+    try {
+      setLoading(true);
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/subscription', {
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setSubscription(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch subscription:', e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function openBillingPortal() {
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/billing/portal', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (e) {
+      setToast('Failed to open billing portal');
+    }
+  }
 
   const checkoutStatus = useMemo(() => {
     const s = sp.get('status');
@@ -58,7 +121,7 @@ export default function PremiumClient() {
       const idToken = await user.getIdToken();
 
       // ВАЖНО: правильный эндпоинт + Bearer
-      const res = await fetch('/api/billing/checkout', {
+      const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -101,14 +164,14 @@ export default function PremiumClient() {
             price="$0"
             period="forever"
             bullets={['Core task modes','Basic overlay controls','Fair-use rate limits']}
-            ctaLabel="You’re on Free"
+            ctaLabel={subscription?.isActive ? "You're on Premium" : "You're on Free"}
             ctaDisabled
           />
           <TierCard
             title="Premium Monthly"
             price="$24"
             period="/month"
-            highlight
+            highlight={!subscription?.isActive}
             bullets={[
               'Unlimited task requests (no caps)',
               'More expressive AI reactions',
@@ -117,29 +180,110 @@ export default function PremiumClient() {
               'Built for Just Chatting & IRL',
             ]}
             note="Renews monthly • Cancel anytime"
-            ctaLabel={busy === 'monthly' ? 'Redirecting…' : isAuthed ? 'Subscribe monthly' : 'Sign in to subscribe'}
-            onClick={() => isAuthed && startCheckout('monthly')}
+            ctaLabel={
+              loading ? 'Loading...' :
+              subscription?.isActive && subscription.isMonthly ? 'Current Plan' :
+              subscription?.isActive ? 'Switch to Monthly' :
+              busy === 'monthly' ? 'Redirecting…' : 
+              isAuthed ? 'Subscribe monthly' : 'Sign in to subscribe'
+            }
+            onClick={() => isAuthed && !subscription?.isMonthly && startCheckout('monthly')}
             loading={busy === 'monthly'}
-            ctaDisabled={!isAuthed}
+            ctaDisabled={!isAuthed || (subscription?.isActive && subscription.isMonthly)}
           />
           <TierCard
             title="Premium Yearly"
             price="$240"
             period="/year"
             subtext="(best value)"
-            highlight
+            highlight={!subscription?.isActive}
             bullets={['Everything in Monthly','Best price for daily streamers','Priority support']}
             note="Renews yearly • Cancel anytime"
-            ctaLabel={busy === 'yearly' ? 'Redirecting…' : isAuthed ? 'Subscribe yearly' : 'Sign in to subscribe'}
-            onClick={() => isAuthed && startCheckout('yearly')}
+            ctaLabel={
+              loading ? 'Loading...' :
+              subscription?.isActive && subscription.isYearly ? 'Current Plan' :
+              subscription?.isActive ? 'Switch to Yearly' :
+              busy === 'yearly' ? 'Redirecting…' : 
+              isAuthed ? 'Subscribe yearly' : 'Sign in to subscribe'
+            }
+            onClick={() => isAuthed && !subscription?.isYearly && startCheckout('yearly')}
             loading={busy === 'yearly'}
-            ctaDisabled={!isAuthed}
+            ctaDisabled={!isAuthed || (subscription?.isActive && subscription.isYearly)}
           />
         </div>
       </section>
 
-      {/* value blocks / FAQ / toast — оставил как у тебя */}
-      {/* ... тот же контент из твоего файла ... */}
+      {/* Subscription Management */}
+      {subscription?.isActive && (
+        <section className="pb-16">
+          <div className="max-w-6xl mx-auto px-5">
+            <div className="rounded-2xl border border-[#415cff] bg-[rgba(10,14,28,.88)] backdrop-blur p-6 shadow-[0_20px_60px_rgba(0,0,0,.45)]">
+              <h2 className="text-xl font-semibold mb-4">🎉 You're Premium!</h2>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <div className="text-sm opacity-80 mb-2">Current Plan</div>
+                  <div className="text-lg font-semibold">
+                    {subscription.isMonthly ? 'Premium Monthly' : 'Premium Yearly'}
+                  </div>
+                  {subscription.currentPeriodEnd && (
+                    <div className="text-sm opacity-70 mt-1">
+                      Renews on {new Date(subscription.currentPeriodEnd * 1000).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={openBillingPortal}
+                    className="px-4 py-3 rounded-xl text-sm font-medium bg-[#415cff] hover:bg-[#3243a6] text-white transition"
+                  >
+                    Manage Subscription
+                  </button>
+                  <div className="text-xs opacity-60">
+                    Update payment method, view invoices, or cancel subscription
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* FAQ Section */}
+      <section className="pb-16">
+        <div className="max-w-6xl mx-auto px-5">
+          <h2 className="text-2xl font-bold mb-8">Frequently Asked Questions</h2>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div>
+              <h3 className="font-semibold mb-2">What's included in Premium?</h3>
+              <p className="text-sm opacity-80">
+                Unlimited task requests, more expressive AI reactions, anti-repeat engine, 
+                priority generation, and premium support.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">Can I cancel anytime?</h3>
+              <p className="text-sm opacity-80">
+                Yes! You can cancel your subscription at any time. You'll continue to have 
+                Premium access until the end of your billing period.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">How does billing work?</h3>
+              <p className="text-sm opacity-80">
+                Monthly subscriptions renew every 30 days, yearly subscriptions renew every 12 months. 
+                You can update your payment method anytime.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">Is there a free trial?</h3>
+              <p className="text-sm opacity-80">
+                We offer a free tier with basic features. Premium unlocks unlimited usage 
+                and advanced features for serious streamers.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {toast && (
         <div className="fixed left-1/2 -translate-x-1/2 bottom-6 px-4 py-2 rounded-xl text-sm bg-[#141a35] border border-[#2a3a7a] shadow-lg">
