@@ -6,11 +6,9 @@ export type Lang = 'en' | 'ru' | 'es';
 /** Тон/режим поведения ассистента */
 export type Mode =
   | 'funny'
-  | 'motivator'
   | 'serious'
   | 'chill'
-  | 'urban'   // уличный/сленговый, но TOS-safe
-  | 'edgy';   // поострее/подколы, но без травли/оскорблений
+  | 'street';   // современный американский сленг, TOS-safe
 
 /** Тип выдачи */
 export type TaskType = 'task' | 'question' | 'banter';
@@ -19,7 +17,7 @@ export type TaskType = 'task' | 'question' | 'banter';
 export type StreamKind = 'just_chatting' | 'irl' | 'other';
 
 /** Значения по умолчанию */
-export const DEFAULT_MODE: Mode = 'motivator';
+export const DEFAULT_MODE: Mode = 'funny';
 export const DEFAULT_TASK_TYPE: TaskType = 'task';
 export const DEFAULT_STREAM_KIND: StreamKind = 'just_chatting';
 
@@ -29,11 +27,9 @@ export type Option<T extends string> = Readonly<{ key: T; label: string; hint: s
 /** Опции тонов */
 export const MODE_OPTIONS: ReadonlyArray<Option<Mode>> = [
   { key: 'funny',     label: 'Funny',     hint: 'Playful, light jokes' },
-  { key: 'motivator', label: 'Motivator', hint: 'Supportive, energetic push' },
   { key: 'serious',   label: 'Serious',   hint: 'Focused, no frills' },
   { key: 'chill',     label: 'Chill',     hint: 'Low-pressure, calm vibe' },
-  { key: 'urban',     label: 'Street',    hint: 'Modern slang, TOS-safe' },
-  { key: 'edgy',      label: 'Edgy',      hint: 'Sharper/roast, TOS-safe' },
+  { key: 'street',    label: 'Street',    hint: 'Modern American slang, TOS-safe' },
 ] as const;
 
 /** Опции типов выдачи */
@@ -53,12 +49,8 @@ export const STREAM_KIND_OPTIONS: ReadonlyArray<Option<StreamKind>> = [
 /** Подсказка под тон (локализуемая) */
 export function modeToHint(mode: Mode, lang: Lang = 'en'): string {
   const en: Record<Mode, string> = {
-    urban:
-      'Use modern urban slang and rhythm; keep it TOS-safe (no slurs/harassment).',
-    edgy:
-      'Sharper/roasty but TOS-safe: teasing without insults or harassment.',
-    motivator:
-      'Be supportive, high-energy, short bursts.',
+    street:
+      'Use modern American street slang: WTF, Dan what are you doing man, what the hell, yo, bruh, no cap, fr fr, bet, slaps, fire, vibe, mood, facts, period, on god, deadass, lowkey, highkey, sus, bussin, no cap, periodt, and all contemporary urban expressions. Keep it TOS-safe but authentic street style.',
     serious:
       'Be concise, focused, and clear.',
     chill:
@@ -68,12 +60,8 @@ export function modeToHint(mode: Mode, lang: Lang = 'en'): string {
   };
 
   const ru: Record<Mode, string> = {
-    urban:
-      'Современный уличный сленг и ритм; строго в рамках правил (без оскорблений).',
-    edgy:
-      'Острее/подколы, но TOS-safe: без травли и оскорблений.',
-    motivator:
-      'Поддерживай и заряжай энергией, коротко и по делу.',
+    street:
+      'Современный американский уличный сленг: WTF, Dan что ты делаешь чувак, what the hell, yo, bruh, no cap, fr fr, bet, slaps, fire, vibe, mood, facts, period, on god, deadass, lowkey, highkey, sus, bussin, no cap, periodt, и все современные уличные выражения. TOS-safe но аутентичный уличный стиль.',
     serious:
       'Кратко, строго и понятно.',
     chill:
@@ -83,12 +71,8 @@ export function modeToHint(mode: Mode, lang: Lang = 'en'): string {
   };
 
   const es: Record<Mode, string> = {
-    urban:
-      'Jerga urbana moderna; siempre dentro de las normas (sin insultos/acosos).',
-    edgy:
-      'Más directo/sarcástico pero TOS-safe: sin acoso ni insultos.',
-    motivator:
-      'Apoya y da energía, frases cortas.',
+    street:
+      'Jerga callejera americana moderna: WTF, Dan qué estás haciendo hombre, what the hell, yo, bruh, no cap, fr fr, bet, slaps, fire, vibe, mood, facts, period, on god, deadass, lowkey, highkey, sus, bussin, no cap, periodt, y todas las expresiones urbanas contemporáneas. TOS-safe pero estilo callejero auténtico.',
     serious:
       'Conciso, enfocado y claro.',
     chill:

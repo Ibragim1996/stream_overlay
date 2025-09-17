@@ -254,8 +254,8 @@ function HomePageContent() {
             <div className="text-base opacity-80 mb-2">Legal & support</div>
             <ul className="list-disc ml-5 text-sm opacity-80 space-y-1">
               <li>Keep tasks safe and TOS-friendly for your platform.</li>
-              <li>We don’t stream your content — this is an overlay only.</li>
-              <li>Questions? Reach us anytime — we’re here to help.</li>
+              <li>We don't stream your content — this is an overlay only.</li>
+              <li>Questions? Reach us anytime — we're here to help.</li>
             </ul>
           </div>
         </section>

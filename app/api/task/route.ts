@@ -1,6 +1,10 @@
 // app/api/task/route.ts
 import { NextRequest } from 'next/server';
 import type { Mode, TaskType, StreamKind } from '@/lib/mode';
+import { userDB } from '@/lib/user-db';
+import { withAuth } from '@/lib/auth-middleware';
+import { openai } from '@/lib/openai-realtime';
+import { buildSystemPrompt } from '@/lib/prompt-builder';
 
 // ...existing code...
 
@@ -49,8 +53,8 @@ type TaskTypeIn = TaskType | 'challenge' | 'joke' | 'just_talk';
 type StreamKindIn = StreamKind | 'just_chat' | 'gaming' | 'music' | 'cooking';
 
 function normMode(v: unknown): Mode {
-  const ok = new Set<Mode>(['funny', 'motivator', 'serious', 'chill', 'urban', 'edgy']);
-  return ok.has(v as Mode) ? (v as Mode) : 'motivator';
+  const ok = new Set<Mode>(['funny', 'serious', 'chill', 'street']);
+  return ok.has(v as Mode) ? (v as Mode) : 'funny';
 }
 function normTaskType(v: unknown): TaskType {
   const s = String(v ?? '').toLowerCase() as TaskTypeIn;
@@ -192,11 +196,9 @@ function toneInstruction(mode: Mode, lang: 'en' | 'ru' | 'es') {
   }
   const en: Record<Mode, string> = {
     funny: 'Playful, witty, no crudeness.',
-    motivator: 'Supportive, energizing.',
     serious: 'Concise and focused.',
     chill: 'Relaxed, low-pressure.',
-    urban: 'Modern street/urban slang vibe, TOS-safe (no slurs).',
-    edgy: 'Sharper/roast-y but TOS-safe (no harassment).',
+    street: 'Modern American street slang: WTF, Dan what are you doing man, what the hell, yo, bruh, no cap, fr fr, bet, slaps, fire, vibe, mood, facts, period, on god, deadass, lowkey, highkey, sus, bussin, no cap, periodt, and all contemporary urban expressions. Keep it TOS-safe but authentic street style.',
   };
   return en[mode];
 }
@@ -371,25 +373,30 @@ type OverlayTaskEventLocal = {
 export async function POST(req: NextRequest) {
   try {
     const raw: Body = (await req.json().catch(() => ({}))) as Body;
-
-    // Берём токен из заголовка или тела
+    
+    // Get user ID from token or create default
     const h1 = req.headers.get('authorization');
     const h2 = req.headers.get('Authorization');
     const hdr = h1 ?? h2 ?? '';
     const bearer = hdr.toLowerCase().startsWith('bearer ')
       ? hdr.slice(7).trim()
       : (raw.token || '').trim();
+    
+    const userId = bearer || 'default-user';
+    const user = userDB.getUser(userId);
 
-    if (!bearer) return json({ ok: false, error: 'token_missing' }, 401);
+    // Check rate limits for free users
+    if (!userDB.canUseTask(user.id)) {
+      return json({ 
+        ok: false, 
+        error: 'limit_reached',
+        code: 'FREE_LIMIT_EXCEEDED',
+        message: 'Free users are limited to 10 tasks per hour. Upgrade to Premium for unlimited access.'
+      }, 429);
+    }
 
-    const v = await verifyBearer(bearer);
-    if (!v.ok) return json({ ok: false, error: 'invalid_token' }, 401);
-
-    const streamerName = v.name || '';
-    const token = bearer;
-
-    const okRate = await rateLimit(token, 20);
-    if (!okRate) return json({ ok: false, error: 'rate_limited' }, 429);
+    const streamerName = user.id;
+    const token = user.id;
 
     const kind = raw.kind === 'ping' ? 'ping' : 'next';
     const mode = normMode(raw.mode);
@@ -406,32 +413,53 @@ export async function POST(req: NextRequest) {
     // kind === 'next'
     const recent = await getRecent(token, 12);
 
-    // Пытаемся 3 раза OpenAI и выбираем наименее похожую строку
-    const candidates: string[] = [];
-    let openaiOk = true;
-    for (let i = 0; i < 3; i++) {
-      try {
-        const line = await openaiOneLine({ mode, taskType, streamKind, voice, lang, recent, name: streamerName });
-        if (line) candidates.push(line);
-      } catch {
-        openaiOk = false;
-        break;
-      }
-    }
-
-    let line = pickDissimilar(candidates, recent);
-
-    // Фоллбек при пустом результате/ошибке OpenAI
-    if (!line) {
+    // Generate task using OpenAI
+    let line = '';
+    let via: 'openai' | 'fallback' = 'fallback';
+    
+    try {
+      // Build prompt based on user profile or defaults
+      const profile = user.profile || {
+        category: streamKind,
+        tone: mode,
+        slangLevel: mode === 'street' ? 8 : 5,
+        language: lang,
+        voice: voice
+      };
+      
+      const systemPrompt = buildSystemPrompt(profile, {
+        category: streamKind,
+        tone: mode,
+        slangLevel: profile.slangLevel,
+        language: lang,
+        context: 'task'
+      });
+      
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: 'Generate a short, engaging task for the streamer (max 140 characters).' }
+        ],
+        max_tokens: 50,
+        temperature: 0.9
+      });
+      
+      line = sanitizeOneLine(response.choices[0]?.message?.content || '');
+      via = 'openai';
+    } catch (error) {
+      console.error('OpenAI error:', error);
+      // Fallback to predefined tasks
       const shuffled = [...FALLBACK].sort(() => Math.random() - 0.5);
       line = pickDissimilar(shuffled.slice(0, 5), recent) || shuffled[0];
       line = sanitizeOneLine(line);
     }
 
+    // Increment usage counter for free users
+    userDB.incrementTaskUsage(user.id);
     await pushRecent(token, line);
 
     // Публикация события в очередь (динамический импорт, чтобы не падать на билде)
-    let via: 'openai' | 'fallback' = openaiOk && candidates.length ? 'openai' : 'fallback';
     try {
       const { channelNameForToken, enqueue } = await import('@/lib/bus');
       const event: OverlayTaskEventLocal = {

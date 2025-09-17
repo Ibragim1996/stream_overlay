@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice Test</title>
+    <style>
+        body { margin: 0; padding: 20px; background: #0b1020; color: white; font-family: Arial, sans-serif; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #243058; border-radius: 8px; }
+        .test-button { padding: 10px 20px; background: #415cff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .test-button:hover { background: #3648e6; }
+        .result { margin: 10px 0; padding: 10px; background: #1a1a1a; border-radius: 5px; }
+        .voice-option { margin: 5px; padding: 10px; background: #2a2a2a; border-radius: 5px; cursor: pointer; }
+        .voice-option:hover { background: #3a3a3a; }
+        .voice-option.selected { background: #415cff; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>OpenAI Voice Test</h1>
+        
+        <div class="test-section">
+            <h3>Voice Selection</h3>
+            <div id="voice-options">
+                <div class="voice-option" data-voice="alloy">🎭 Alloy - Neutral & Clear</div>
+                <div class="voice-option" data-voice="echo">🎪 Echo - Expressive & Dynamic</div>
+                <div class="voice-option" data-voice="fable">📚 Fable - Storytelling & Warm</div>
+                <div class="voice-option" data-voice="onyx">💎 Onyx - Deep & Authoritative</div>
+                <div class="voice-option" data-voice="nova">⭐ Nova - Bright & Energetic</div>
+                <div class="voice-option" data-voice="shimmer">✨ Shimmer - Soft & Gentle</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Mode Selection</h3>
+            <div id="mode-options">
+                <div class="voice-option" data-mode="funny">😄 Funny - With laughs and chuckles</div>
+                <div class="voice-option" data-mode="street">🔥 Street - With slang and attitude</div>
+                <div class="voice-option" data-mode="serious">😐 Serious - Professional tone</div>
+                <div class="voice-option" data-mode="chill">😎 Chill - Relaxed and cool</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Text Input</h3>
+            <textarea id="text-input" placeholder="Enter text to convert to speech..." style="width: 100%; height: 100px; padding: 10px; background: #2a2a2a; color: white; border: 1px solid #243058; border-radius: 5px;">Yo, this is a test of the new voice system! It should sound like a real person talking, not a robot. What do you think, bruh?</textarea>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test Voice</h3>
+            <button class="test-button" onclick="testVoice()">🔊 Test Voice</button>
+            <button class="test-button" onclick="stopVoice()">⏹️ Stop</button>
+            <div id="voice-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>API Test</h3>
+            <button class="test-button" onclick="testAPI()">🧪 Test API</button>
+            <div id="api-result" class="result"></div>
+        </div>
+    </div>
+    
+    <script>
+        let selectedVoice = 'alloy';
+        let selectedMode = 'funny';
+        let currentAudio = null;
+        
+        // Voice selection
+        document.querySelectorAll('[data-voice]').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('[data-voice]').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedVoice = option.dataset.voice;
+            });
+        });
+        
+        // Mode selection
+        document.querySelectorAll('[data-mode]').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('[data-mode]').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedMode = option.dataset.mode;
+            });
+        });
+        
+        // Select first voice and mode by default
+        document.querySelector('[data-voice]').classList.add('selected');
+        document.querySelector('[data-mode]').classList.add('selected');
+        
+        async function testVoice() {
+            const text = document.getElementById('text-input').value;
+            if (!text.trim()) {
+                document.getElementById('voice-result').innerHTML = 'Please enter some text first.';
+                return;
+            }
+            
+            try {
+                document.getElementById('voice-result').innerHTML = 'Generating voice...';
+                
+                const response = await fetch('/api/voice/realtime', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, voice: selectedVoice, mode: selectedMode })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Voice generation failed: ' + response.status);
+                }
+                
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                // Stop current audio
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+                
+                // Play new audio
+                currentAudio = new Audio(audioUrl);
+                currentAudio.onended = () => {
+                    document.getElementById('voice-result').innerHTML = 'Voice playback completed.';
+                    URL.revokeObjectURL(audioUrl);
+                };
+                currentAudio.onerror = () => {
+                    document.getElementById('voice-result').innerHTML = 'Voice playback failed.';
+                    URL.revokeObjectURL(audioUrl);
+                };
+                
+                await currentAudio.play();
+                document.getElementById('voice-result').innerHTML = 'Playing voice...';
+                
+            } catch (error) {
+                document.getElementById('voice-result').innerHTML = 'Error: ' + error.message;
+            }
+        }
+        
+        function stopVoice() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+                document.getElementById('voice-result').innerHTML = 'Voice stopped.';
+            }
+        }
+        
+        async function testAPI() {
+            try {
+                const response = await fetch('/api/voice/realtime', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: 'Test', voice: 'alloy' })
+                });
+                
+                const data = await response.blob();
+                document.getElementById('api-result').innerHTML = `API Response: ${response.status} ${response.statusText}<br>Audio size: ${data.size} bytes`;
+            } catch (error) {
+                document.getElementById('api-result').innerHTML = 'API Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

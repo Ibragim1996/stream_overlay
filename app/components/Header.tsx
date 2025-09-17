@@ -45,6 +45,7 @@ export default function Header() {
 
       <nav className="flex items-center gap-4 text-sm opacity-90">
         <Link className="hover:opacity-100 opacity-80 font-semibold text-indigo-400" href="/premium">Premium</Link>
+        <Link className="hover:opacity-100 opacity-80 font-semibold text-green-400" href="/ai-reactions/generate">🎤 AI Reactions</Link>
         <Link className="hover:opacity-100 opacity-80" href="/faq">FAQ</Link>
         <Link className="hover:opacity-100 opacity-80" href="/help">Help</Link>
         <Link className="hover:opacity-100 opacity-80" href="/legal/privacy">Privacy</Link>

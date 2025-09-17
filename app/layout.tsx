@@ -9,11 +9,11 @@ import Header from './components/Header';
 const fontSans = Inter({ subsets: ['latin'], variable: '--font-geist-sans', display: 'swap' });
 const fontMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-geist-mono', display: 'swap' });
 
-// Prefer public URL from env in production, fallback to localhost for dev
+// Prefer public URL from env in production, fallback to Vercel URL
 const appUrl =
   process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')
     ? process.env.NEXT_PUBLIC_APP_URL
-    : 'http://localhost:3000';
+    : 'https://ai-stream-new.vercel.app';
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),

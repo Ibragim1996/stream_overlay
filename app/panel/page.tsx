@@ -69,7 +69,7 @@ export default function PanelPage() {
         baseUrl = `${origin}/overlay?t=${encodeURIComponent(token)}`;
       }
 
-      const u = new URL(baseUrl, typeof window !== "undefined" ? window.location.href : "http://localhost");
+      const u = new URL(baseUrl, typeof window !== "undefined" ? window.location.href : "https://ai-stream-new.vercel.app");
 
       // добавляем/обновляем параметры для overlay
       u.searchParams.set("m", mode);                 // tone
