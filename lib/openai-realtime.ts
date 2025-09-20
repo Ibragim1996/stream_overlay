@@ -13,6 +13,15 @@ export function getOpenAI(): OpenAI {
   return openaiClient;
 }
 
+// Export for backward compatibility
+export const openai = new Proxy({} as unknown as OpenAI, {
+  get(_target, prop, receiver) {
+    const inst: any = getOpenAI();
+    const val = Reflect.get(inst, prop, receiver);
+    return typeof val === 'function' ? val.bind(inst) : val;
+  },
+}) as unknown as OpenAI;
+
 // Realtime API configuration
 export const REALTIME_CONFIG = {
   // Preferred model, fallback to preview if not available
