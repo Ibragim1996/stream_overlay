@@ -6,6 +6,9 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getAuthClient } from '@/lib/firebaseClient';
 import RequireAuth from '@/app/components/RequireAuth';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 function SettingsContent() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);

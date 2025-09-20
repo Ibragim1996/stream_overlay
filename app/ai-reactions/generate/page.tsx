@@ -3,6 +3,9 @@
 import { useState, useRef } from 'react';
 import { nanoid } from 'nanoid';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default function GenerateAIReactionKey() {
   const [streamerName, setStreamerName] = useState('');
   const [generatedUrl, setGeneratedUrl] = useState('');

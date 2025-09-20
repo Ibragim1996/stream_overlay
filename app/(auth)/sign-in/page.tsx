@@ -5,6 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthClient } from '@/lib/firebaseClient';
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
