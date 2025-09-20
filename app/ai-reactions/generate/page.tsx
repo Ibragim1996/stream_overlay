@@ -18,7 +18,8 @@ export default function GenerateAIReactionKey() {
       return;
     }
 
-    const url = `${window.location.origin}/ai-reactions/store/${streamerName.trim().toLowerCase()}`;
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://stream-overlay-l96s.vercel.app';
+    const url = `${baseUrl}/ai-reactions/store/${streamerName.trim().toLowerCase()}`;
     setGeneratedUrl(url);
   };
 

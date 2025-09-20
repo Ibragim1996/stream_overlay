@@ -14,7 +14,8 @@ type OverlayState = {
 };
 
 function readSearch(): URLSearchParams {
-  return new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  if (typeof window === 'undefined') return new URLSearchParams();
+  return new URLSearchParams(window.location.search);
 }
 
 function setSearchParam(k: string, v: string | null) {

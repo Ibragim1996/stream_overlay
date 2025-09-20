@@ -27,6 +27,7 @@ function HomePageContent() {
 
   // tiny toast
   const toast = (msg: string) => {
+    if (typeof window === 'undefined') return;
     const el = document.getElementById('toast-bar');
     if (!el) return;
     el.textContent = msg;
@@ -73,7 +74,8 @@ function HomePageContent() {
         s: String(Math.max(5, seconds)),
       });
 
-      const url = `${window.location.origin}/overlay?${q.toString()}`;
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://stream-overlay-l96s.vercel.app';
+      const url = `${baseUrl}/overlay?${q.toString()}`;
       setOverlayUrl(url);
       toast('Link generated');
     } catch (e) {
