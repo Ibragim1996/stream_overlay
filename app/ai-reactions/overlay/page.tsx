@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default function AIReactionsOverlay() {
   const searchParams = useSearchParams();
   const overlayKey = searchParams.get('key');
