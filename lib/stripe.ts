@@ -18,5 +18,5 @@ export const stripe = new Proxy({} as unknown as Stripe, {
   },
 }) as unknown as Stripe;
 
-export const PRICE_PRO_MONTH = process.env.STRIPE_PRICE_PRO_MONTH!;
-export const PRICE_PRO_YEAR  = process.env.STRIPE_PRICE_PRO_YEAR!;
+export const PRICE_PRO_MONTH = process.env.STRIPE_PRICE_PRO_MONTH || 'price_pro_month';
+export const PRICE_PRO_YEAR  = process.env.STRIPE_PRICE_PRO_YEAR || 'price_pro_year';

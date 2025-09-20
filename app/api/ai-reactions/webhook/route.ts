@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
+// Runtime configuration
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+function getStripe(): Stripe {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error('STRIPE_SECRET_KEY is not set');
+  }
+  return new Stripe(secretKey, {
+    apiVersion: '2025-08-27.basil',
+  });
+}
+
 // Send reaction to overlay via WebSocket
 async function sendReactionToOverlay(streamerId: string, reaction: any) {
   // In a real implementation, you would:
@@ -72,6 +86,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
     }
 
+    const stripe = getStripe();
     const event = stripe.webhooks.constructEvent(
       body,
       signature,

@@ -7,9 +7,15 @@ export type TaskType = 'question' | 'challenge' | 'just_talk' | 'joke';
 export type StreamKind = 'just_chat' | 'irl' | 'gaming' | 'music' | 'cooking';
 export type Lang = 'en' | 'ru' | 'es';
 
-export const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+let client: OpenAI | null = null;
+
+export function getOpenAI(): OpenAI {
+  if (client) return client;
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY is not set');
+  client = new OpenAI({ apiKey });
+  return client;
+}
 
 /** Мягкий helper: 1 строка, без кавычек/переводов строк/лишних пробелов */
 function sanitizeOneLine(s: string): string {
@@ -188,7 +194,7 @@ export async function getTaskFromOpenAI(opts: {
 
   // основной вызов
   try {
-    const resp = await client.chat.completions.create({
+    const resp = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       ...common,
     });
@@ -201,7 +207,7 @@ export async function getTaskFromOpenAI(opts: {
 
   // запасная модель (если вдруг)
   try {
-    const resp = await client.chat.completions.create({
+    const resp = await getOpenAI().chat.completions.create({
       model: 'o4-mini',
       ...common,
     });
