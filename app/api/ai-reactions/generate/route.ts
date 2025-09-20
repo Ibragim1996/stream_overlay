@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Runtime configuration
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+function getOpenAI(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not set');
+  }
+  return new OpenAI({ apiKey });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +47,7 @@ export async function POST(req: NextRequest) {
 async function generateAIReaction(style: string, tier: string, context?: string) {
   const systemPrompt = buildSystemPrompt(style, context);
   
+  const openai = getOpenAI();
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -105,6 +114,7 @@ async function generateEmotionalVoice(text: string, style: string) {
     // Generate emotional text with voice instructions
     const emotionalText = addVoiceInstructions(text, settings);
     
+    const openai = getOpenAI();
     const response = await openai.audio.speech.create({
       model: "tts-1-hd",
       voice: settings.voice as any,

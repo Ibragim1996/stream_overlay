@@ -1,9 +1,17 @@
 import { NextRequest } from 'next/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Runtime configuration
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+function getOpenAI(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not set');
+  }
+  return new OpenAI({ apiKey });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,6 +86,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Use OpenAI TTS API with enhanced text for more natural speech
+    const openai = getOpenAI();
     const mp3 = await openai.audio.speech.create({
       model: 'tts-1-hd',
       voice: voice as 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer',

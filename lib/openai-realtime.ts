@@ -1,9 +1,17 @@
 // lib/openai-realtime.ts
 import OpenAI from 'openai';
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openaiClient: OpenAI | null = null;
+
+export function getOpenAI(): OpenAI {
+  if (openaiClient) return openaiClient;
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not set');
+  }
+  openaiClient = new OpenAI({ apiKey });
+  return openaiClient;
+}
 
 // Realtime API configuration
 export const REALTIME_CONFIG = {
@@ -33,6 +41,7 @@ export const REALTIME_CONFIG = {
 export async function checkRealtimeAvailability(): Promise<boolean> {
   try {
     // Try to create a test connection
+    const openai = getOpenAI();
     const response = await openai.chat.completions.create({
       model: REALTIME_CONFIG.model,
       messages: [{ role: 'user', content: 'test' }],
