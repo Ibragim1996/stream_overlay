@@ -201,7 +201,7 @@ export default function OverlayClient(props: {
   useEffect(() => {
     fetchTask();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, name, voice]);
+  }, [mode, voice]);
 
   // Drag functionality
   const handleMouseDown = (e: React.MouseEvent) => {

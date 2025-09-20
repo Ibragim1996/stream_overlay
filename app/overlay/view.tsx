@@ -1,7 +1,7 @@
 // app/overlay/view.tsx
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MODE_OPTIONS, type Mode } from '@/lib/mode';
 import OverlayClient from './OverlayClient';
 
@@ -20,10 +20,14 @@ function readSearch(): URLSearchParams {
 
 function setSearchParam(k: string, v: string | null) {
   if (typeof window === 'undefined') return;
-  const u = new URL(window.location.href);
-  if (v === null) u.searchParams.delete(k);
-  else u.searchParams.set(k, v);
-  window.history.replaceState(null, '', u.toString());
+  try {
+    const u = new URL(window.location.href);
+    if (v === null) u.searchParams.delete(k);
+    else u.searchParams.set(k, v);
+    window.history.replaceState(null, '', u.toString());
+  } catch (error) {
+    console.error('Error setting search param:', error);
+  }
 }
 
 async function fetchState(token: string): Promise<OverlayState> {
@@ -74,7 +78,7 @@ export default function OverlayView() {
       setSearchParam('m', effectiveMode);
     })();
     return () => { cancelled = true; };
-  }, [token]);
+  }, [token, mode]);
 
   async function onChangeMode(next: Mode) {
     setMode(next);
