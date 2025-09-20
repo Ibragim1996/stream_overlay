@@ -42,19 +42,26 @@ async function saveState(token: string, patch: OverlayState): Promise<void> {
 }
 
 export default function OverlayView() {
-  const token = useMemo(() => readSearch().get('t') ?? '', []);
-  const [mode, setMode] = useState<Mode>(() => {
-    const urlMode = readSearch().get('m') as Mode | null;
-    return (urlMode && (MODE_OPTIONS.some(o => o.key === urlMode) ? urlMode : null)) ?? 'motivator';
-  });
-  const [auto, setAuto] = useState(() => {
-    const urlAuto = readSearch().get('a');
-    return urlAuto === '1';
-  });
-  const [intervalSec, setIntervalSec] = useState(() => {
-    const urlSec = readSearch().get('s');
-    return urlSec ? parseInt(urlSec, 10) : 15;
-  });
+  const [token, setToken] = useState('');
+  const [mode, setMode] = useState<Mode>('motivator');
+  const [auto, setAuto] = useState(false);
+  const [intervalSec, setIntervalSec] = useState(15);
+
+  // Initialize from URL params on client side
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const urlParams = readSearch();
+    const urlToken = urlParams.get('t') ?? '';
+    const urlMode = urlParams.get('m') as Mode | null;
+    const urlAuto = urlParams.get('a');
+    const urlSec = urlParams.get('s');
+    
+    setToken(urlToken);
+    setMode((urlMode && MODE_OPTIONS.some(o => o.key === urlMode) ? urlMode : null) ?? 'motivator');
+    setAuto(urlAuto === '1');
+    setIntervalSec(urlSec ? parseInt(urlSec, 10) : 15);
+  }, []);
 
   useEffect(() => {
     if (!token) return;

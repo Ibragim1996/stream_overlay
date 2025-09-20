@@ -96,6 +96,7 @@ export default function OverlayClient(props: {
 
   // Stop speaking function
   const stopSpeaking = useCallback(() => {
+    if (typeof window === 'undefined') return;
     // Stop any playing audio
     const audioElements = document.querySelectorAll('audio');
     audioElements.forEach(audio => {
@@ -107,6 +108,7 @@ export default function OverlayClient(props: {
 
   // Initialize mode from URL params
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const urlParams = new URLSearchParams(window.location.search);
     const urlMode = urlParams.get('m');
     if (urlMode && ['funny', 'serious', 'chill', 'street'].includes(urlMode)) {
@@ -119,6 +121,10 @@ export default function OverlayClient(props: {
       setLoading(true);
       
       // Получаем токен из URL
+      if (typeof window === 'undefined') {
+        setTask("Loading...");
+        return;
+      }
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('t');
       
@@ -208,7 +214,7 @@ export default function OverlayClient(props: {
   };
 
   const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging || !dragRef.current) return;
+    if (!isDragging || !dragRef.current || typeof window === 'undefined') return;
     
     const deltaX = e.clientX - dragRef.current.startX;
     const deltaY = e.clientY - dragRef.current.startY;
@@ -225,7 +231,7 @@ export default function OverlayClient(props: {
   };
 
   useEffect(() => {
-    if (isDragging) {
+    if (isDragging && typeof window !== 'undefined') {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -239,6 +245,7 @@ export default function OverlayClient(props: {
   useEffect(() => {
     const pollReactions = async () => {
       try {
+        if (typeof window === 'undefined') return;
         // Get streamer ID from URL or use default
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token') || 'default-user';
