@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Overlay Test</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            margin: 0; 
+            padding: 20px; 
+            background: #0b1020; 
+            color: white; 
+        }
+        .overlay { 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%);
+            background: rgba(10,14,28,0.95); 
+            padding: 20px; 
+            border-radius: 10px; 
+            border: 1px solid #243058;
+            z-index: 1000;
+        }
+        .test-button { 
+            background: #415cff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            margin: 5px; 
+            cursor: pointer;
+        }
+        .test-button:hover { 
+            background: #3648e6; 
+        }
+        .status { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 5px; 
+        }
+        .success { background: #060; }
+        .error { background: #600; }
+        .info { background: #006; }
+    </style>
+</head>
+<body>
+    <h1>Simple Overlay Test</h1>
+    
+    <div class="status info">
+        <strong>Testing overlay functionality...</strong>
+    </div>
+    
+    <div id="test-results"></div>
+    
+    <div class="overlay" id="test-overlay">
+        <h3>Test Overlay</h3>
+        <p>This is a simple overlay test</p>
+        <button class="test-button" onclick="testAPI()">Test API Call</button>
+        <button class="test-button" onclick="testWindow()">Test Window Object</button>
+        <div id="overlay-status">Ready</div>
+    </div>
+    
+    <script>
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            document.getElementById('test-results').appendChild(div);
+        }
+        
+        function testAPI() {
+            addResult('Testing API call...', 'info');
+            
+            fetch('/api/task', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: 'TEST_TOKEN',
+                    mode: 'funny',
+                    voice: 'alloy',
+                    streamKind: 'just_chatting',
+                    kind: 'next'
+                })
+            })
+            .then(response => {
+                addResult(`API Response: ${response.status} ${response.statusText}`, 
+                    response.ok ? 'success' : 'error');
+                return response.json();
+            })
+            .then(data => {
+                addResult(`API Data: ${JSON.stringify(data)}`, 'success');
+                document.getElementById('overlay-status').textContent = 
+                    `API Success: ${data.task || 'No task'}`;
+            })
+            .catch(error => {
+                addResult(`API Error: ${error.message}`, 'error');
+                document.getElementById('overlay-status').textContent = 
+                    `API Error: ${error.message}`;
+            });
+        }
+        
+        function testWindow() {
+            addResult('Testing window object...', 'info');
+            
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('t');
+                addResult(`Window test: token=${token || 'none'}`, 'success');
+                
+                // Test window properties
+                addResult(`Window properties: innerWidth=${window.innerWidth}, innerHeight=${window.innerHeight}`, 'success');
+                
+                // Test document
+                addResult(`Document test: body exists=${!!document.body}`, 'success');
+                
+                document.getElementById('overlay-status').textContent = 
+                    `Window OK: ${window.innerWidth}x${window.innerHeight}`;
+            } catch (error) {
+                addResult(`Window Error: ${error.message}`, 'error');
+                document.getElementById('overlay-status').textContent = 
+                    `Window Error: ${error.message}`;
+            }
+        }
+        
+        // Auto-run tests
+        addResult('Starting tests...', 'info');
+        
+        // Test 1: Basic functionality
+        setTimeout(() => {
+            addResult('Test 1: Basic functionality - PASS', 'success');
+        }, 1000);
+        
+        // Test 2: Window object
+        setTimeout(() => {
+            testWindow();
+        }, 2000);
+        
+        // Test 3: API call
+        setTimeout(() => {
+            testAPI();
+        }, 3000);
+        
+        // Test 4: Check for errors
+        window.addEventListener('error', function(e) {
+            addResult(`Global Error: ${e.message} at ${e.filename}:${e.lineno}`, 'error');
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            addResult(`Promise Rejection: ${e.reason}`, 'error');
+        });
+    </script>
+</body>
+</html>

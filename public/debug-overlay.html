@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Overlay</title>
+    <style>
+        body { font-family: Arial; margin: 20px; background: #0b1020; color: white; }
+        .test { margin: 10px 0; padding: 10px; background: #333; border-radius: 5px; }
+        .error { background: #600; }
+        .success { background: #060; }
+        iframe { width: 100%; height: 400px; border: 1px solid #666; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Overlay Debug Test</h1>
+    
+    <div class="test">
+        <h3>Test 1: Direct iframe</h3>
+        <iframe id="test1" src="http://localhost:3001/overlay?t=TEST"></iframe>
+    </div>
+    
+    <div class="test">
+        <h3>Test 2: Fetch and display</h3>
+        <div id="test2-content">Loading...</div>
+    </div>
+    
+    <div class="test">
+        <h3>Test 3: Console errors</h3>
+        <div id="console-output"></div>
+    </div>
+    
+    <script>
+        // Capture console errors
+        const consoleOutput = document.getElementById('console-output');
+        const originalError = console.error;
+        const originalLog = console.log;
+        
+        function addToConsole(message, type = 'log') {
+            const div = document.createElement('div');
+            div.style.color = type === 'error' ? '#ff6b6b' : '#4ecdc4';
+            div.style.fontSize = '12px';
+            div.style.margin = '2px 0';
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleOutput.appendChild(div);
+        }
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+        
+        // Test 1: iframe load
+        document.getElementById('test1').onload = function() {
+            addToConsole('✅ Iframe loaded successfully');
+        };
+        
+        document.getElementById('test1').onerror = function() {
+            addToConsole('❌ Iframe failed to load', 'error');
+        };
+        
+        // Test 2: Fetch test
+        fetch('http://localhost:3001/overlay?t=TEST')
+            .then(response => {
+                addToConsole(`✅ Fetch response: ${response.status} ${response.statusText}`);
+                return response.text();
+            })
+            .then(html => {
+                const content = document.getElementById('test2-content');
+                content.innerHTML = `<pre style="font-size: 10px; overflow: auto; max-height: 200px;">${html.substring(0, 1000)}...</pre>`;
+                
+                if (html.includes('Application error')) {
+                    addToConsole('❌ Found "Application error" in response', 'error');
+                } else if (html.includes('Initializing overlay')) {
+                    addToConsole('✅ Found "Initializing overlay" - server-side working');
+                } else if (html.includes('Missing Token')) {
+                    addToConsole('✅ Found "Missing Token" - validation working');
+                } else {
+                    addToConsole('⚠️ Unknown response content');
+                }
+            })
+            .catch(error => {
+                addToConsole(`❌ Fetch error: ${error.message}`, 'error');
+            });
+        
+        // Test 3: Check if Next.js is working
+        setTimeout(() => {
+            const iframe = document.getElementById('test1');
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (iframeDoc) {
+                    addToConsole('✅ Can access iframe document');
+                    
+                    // Check for React hydration
+                    if (iframeDoc.querySelector('[data-reactroot]') || iframeDoc.querySelector('#__next')) {
+                        addToConsole('✅ React/Next.js structure found');
+                    } else {
+                        addToConsole('⚠️ No React/Next.js structure found');
+                    }
+                    
+                    // Check for errors
+                    const errorElements = iframeDoc.querySelectorAll('[class*="error"], [id*="error"]');
+                    if (errorElements.length > 0) {
+                        addToConsole(`⚠️ Found ${errorElements.length} error elements`);
+                    }
+                } else {
+                    addToConsole('❌ Cannot access iframe document (CORS)');
+                }
+            } catch (e) {
+                addToConsole(`❌ Error accessing iframe: ${e.message}`, 'error');
+            }
+        }, 3000);
+        
+        // Test 4: Check for JavaScript errors
+        window.addEventListener('error', function(e) {
+            addToConsole(`❌ Global error: ${e.message} at ${e.filename}:${e.lineno}`, 'error');
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            addToConsole(`❌ Unhandled promise rejection: ${e.reason}`, 'error');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal Overlay Test</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            margin: 0; 
+            padding: 20px; 
+            background: #0b1020; 
+            color: white; 
+        }
+        .overlay { 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%);
+            background: rgba(10,14,28,0.95); 
+            padding: 20px; 
+            border-radius: 10px; 
+            border: 1px solid #243058;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        .button { 
+            background: #415cff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            margin: 5px; 
+            cursor: pointer;
+        }
+        .button:hover { 
+            background: #3648e6; 
+        }
+        .status { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 5px; 
+            background: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Minimal Overlay Test</h1>
+    
+    <div class="overlay">
+        <h3>Overlay Test</h3>
+        <div id="task-display">Loading...</div>
+        <button class="button" onclick="fetchTask()">Get Task</button>
+        <div id="status">Ready</div>
+    </div>
+    
+    <div id="logs" style="margin-top: 20px; font-family: monospace; font-size: 12px;"></div>
+    
+    <script>
+        function log(message) {
+            const div = document.createElement('div');
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            div.style.margin = '2px 0';
+            div.style.padding = '2px 5px';
+            div.style.background = '#222';
+            div.style.borderRadius = '3px';
+            document.getElementById('logs').appendChild(div);
+        }
+        
+        async function fetchTask() {
+            log('Fetching task...');
+            document.getElementById('status').textContent = 'Loading...';
+            
+            try {
+                const response = await fetch('/api/task', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: 'TEST',
+                        mode: 'funny',
+                        voice: 'alloy',
+                        streamKind: 'just_chatting',
+                        kind: 'next'
+                    })
+                });
+                
+                log(`Response: ${response.status} ${response.statusText}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log(`Data: ${JSON.stringify(data)}`);
+                
+                document.getElementById('task-display').textContent = data.task || 'No task';
+                document.getElementById('status').textContent = 'Success';
+                
+            } catch (error) {
+                log(`Error: ${error.message}`);
+                document.getElementById('status').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Auto-fetch on load
+        log('Page loaded, testing...');
+        fetchTask();
+        
+        // Error handling
+        window.addEventListener('error', function(e) {
+            log(`Global Error: ${e.message} at ${e.filename}:${e.lineno}`);
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            log(`Promise Rejection: ${e.reason}`);
+        });
+    </script>
+</body>
+</html>
