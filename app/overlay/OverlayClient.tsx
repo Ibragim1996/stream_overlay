@@ -125,6 +125,7 @@ export default function OverlayClient(props: {
         setTask("Loading...");
         return;
       }
+      
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('t');
       
@@ -169,7 +170,8 @@ export default function OverlayClient(props: {
       if (voiceEnabled && newTask) {
         speakText(newTask);
       }
-    } catch {
+    } catch (error) {
+      console.error('Fetch task error:', error);
       const errorTask = "Network error. Try again.";
       setTask(errorTask);
       if (voiceEnabled) {

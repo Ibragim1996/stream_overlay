@@ -50,22 +50,65 @@ export default function OverlayView() {
   const [mode, setMode] = useState<Mode>('motivator');
   const [auto, setAuto] = useState(false);
   const [intervalSec, setIntervalSec] = useState(15);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize from URL params on client side
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    const urlParams = readSearch();
-    const urlToken = urlParams.get('t') ?? '';
-    const urlMode = urlParams.get('m') as Mode | null;
-    const urlAuto = urlParams.get('a');
-    const urlSec = urlParams.get('s');
-    
-    setToken(urlToken);
-    setMode((urlMode && MODE_OPTIONS.some(o => o.key === urlMode) ? urlMode : null) ?? 'motivator');
-    setAuto(urlAuto === '1');
-    setIntervalSec(urlSec ? parseInt(urlSec, 10) : 15);
+    try {
+      const urlParams = readSearch();
+      const urlToken = urlParams.get('t') ?? '';
+      const urlMode = urlParams.get('m') as Mode | null;
+      const urlAuto = urlParams.get('a');
+      const urlSec = urlParams.get('s');
+      
+      setToken(urlToken);
+      setMode((urlMode && MODE_OPTIONS.some(o => o.key === urlMode) ? urlMode : null) ?? 'motivator');
+      setAuto(urlAuto === '1');
+      setIntervalSec(urlSec ? parseInt(urlSec, 10) : 15);
+      setIsInitialized(true);
+    } catch (error) {
+      console.error('Error initializing overlay:', error);
+      setIsInitialized(true);
+    }
   }, []);
+
+  // Show error if no token provided
+  if (isInitialized && !token) {
+    return (
+      <div className="min-h-screen bg-[#0b1020] flex items-center justify-center">
+        <div className="text-white text-center max-w-md mx-auto p-6">
+          <div className="text-yellow-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold mb-4">Missing Token</h2>
+          <p className="text-gray-300 mb-4">
+            The overlay requires a valid token. Please check your URL and try again.
+          </p>
+          <p className="text-sm text-gray-400 mb-4">
+            Expected format: /overlay?t=YOUR_TOKEN&m=mode&a=auto&s=seconds
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-[#415cff] text-white rounded-lg hover:bg-[#3648e6] transition-colors"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while initializing
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-[#0b1020] flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="w-8 h-8 border-2 border-[#415cff] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p>Initializing overlay...</p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!token) return;
