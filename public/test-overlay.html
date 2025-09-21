@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overlay Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0b1020;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 600px;
+            text-align: center;
+            background: rgba(10, 14, 28, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid #243058;
+        }
+        .test-link {
+            display: inline-block;
+            background: #415cff;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .test-link:hover {
+            background: #3648e6;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(0, 255, 0, 0.1);
+        }
+        .error {
+            background: rgba(255, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Overlay Test Page</h1>
+        
+        <div class="status" id="status">
+            Testing overlay URLs...
+        </div>
+        
+        <h3>Test Links:</h3>
+        <a href="https://stream-overlay-six.vercel.app/overlay?t=TEST" class="test-link" target="_blank">
+            Test Main Overlay
+        </a>
+        
+        <a href="https://stream-overlay-six.vercel.app/overlay?t=NEWTEST" class="test-link" target="_blank">
+            Test New Token
+        </a>
+        
+        <a href="https://stream-overlay-six.vercel.app/" class="test-link" target="_blank">
+            Test Home Page
+        </a>
+        
+        <h3>Instructions:</h3>
+        <ol style="text-align: left; max-width: 400px; margin: 0 auto;">
+            <li>Click "Test Main Overlay" above</li>
+            <li>Check if the page loads without errors</li>
+            <li>Look for "Current Task" and "Token Info" sections</li>
+            <li>If you see "Application error", check browser console (F12)</li>
+        </ol>
+        
+        <div id="console-info" style="margin-top: 20px; font-size: 14px; color: #888;">
+            <p>Console logs will appear here...</p>
+        </div>
+    </div>
+
+    <script>
+        console.log('🚀 Test page loaded');
+        
+        // Test if we can fetch the overlay
+        async function testOverlay() {
+            try {
+                console.log('📡 Testing overlay fetch...');
+                const response = await fetch('https://stream-overlay-six.vercel.app/overlay?t=TEST');
+                console.log('📡 Response status:', response.status);
+                
+                if (response.ok) {
+                    const html = await response.text();
+                    console.log('📡 HTML length:', html.length);
+                    
+                    if (html.includes('Current Task')) {
+                        document.getElementById('status').innerHTML = '✅ Overlay is working! Found "Current Task" in response.';
+                        document.getElementById('status').className = 'status';
+                    } else {
+                        document.getElementById('status').innerHTML = '⚠️ Overlay responds but missing expected content.';
+                        document.getElementById('status').className = 'status error';
+                    }
+                } else {
+                    document.getElementById('status').innerHTML = `❌ Overlay returned error: ${response.status}`;
+                    document.getElementById('status').className = 'status error';
+                }
+            } catch (error) {
+                console.error('🚨 Fetch error:', error);
+                document.getElementById('status').innerHTML = `❌ Fetch failed: ${error.message}`;
+                document.getElementById('status').className = 'status error';
+            }
+        }
+        
+        // Run test when page loads
+        testOverlay();
+        
+        // Log console messages to page
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            document.getElementById('console-info').innerHTML += '<br>✅ ' + args.join(' ');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            document.getElementById('console-info').innerHTML += '<br>❌ ' + args.join(' ');
+        };
+    </script>
+</body>
+</html>
