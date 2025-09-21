@@ -56,6 +56,8 @@ export default function OverlayView() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
+    console.log('🔍 OverlayView useEffect - initializing');
+    
     try {
       const urlParams = readSearch();
       const urlToken = urlParams.get('t') ?? '';
@@ -63,13 +65,17 @@ export default function OverlayView() {
       const urlAuto = urlParams.get('a');
       const urlSec = urlParams.get('s');
       
+      console.log('🔍 URL params:', { urlToken, urlMode, urlAuto, urlSec });
+      
       setToken(urlToken);
       setMode((urlMode && MODE_OPTIONS.some(o => o.key === urlMode) ? urlMode : null) ?? 'motivator');
       setAuto(urlAuto === '1');
       setIntervalSec(urlSec ? parseInt(urlSec, 10) : 15);
       setIsInitialized(true);
+      
+      console.log('🔍 OverlayView initialized successfully');
     } catch (error) {
-      console.error('Error initializing overlay:', error);
+      console.error('🚨 Error initializing overlay:', error);
       setIsInitialized(true);
     }
   }, []);
