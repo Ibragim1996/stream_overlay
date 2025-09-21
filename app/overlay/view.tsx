@@ -137,9 +137,21 @@ export default function OverlayView() {
 
   return (
     <OverlayClient
+      token={token}
       mode={mode}
       auto={auto}
       intervalSec={intervalSec}
+      onModeChange={onChangeMode}
+      onAutoChange={(a) => {
+        setAuto(a);
+        setSearchParam('a', a ? '1' : null);
+        if (token) saveState(token, { auto: a });
+      }}
+      onIntervalChange={(s) => {
+        setIntervalSec(s);
+        setSearchParam('s', s.toString());
+        if (token) saveState(token, { seconds: s });
+      }}
     />
   );
 }
