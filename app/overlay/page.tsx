@@ -1,5 +1,3 @@
-import { Suspense } from 'react';
-
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
@@ -108,17 +106,6 @@ async function OverlayContent({ searchParams }: { searchParams: { t?: string } }
   );
 }
 
-export default function OverlayPage({ searchParams }: { searchParams: { t?: string } }) {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#0b1020] flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="w-8 h-8 border-2 border-[#415cff] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p>Loading overlay...</p>
-        </div>
-      </div>
-    }>
-      <OverlayContent searchParams={searchParams} />
-    </Suspense>
-  );
+export default async function OverlayPage({ searchParams }: { searchParams: { t?: string } }) {
+  return <OverlayContent searchParams={searchParams} />;
 }
