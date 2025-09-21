@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import RefreshButton from './RefreshButton';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -83,12 +84,7 @@ async function OverlayContent({ searchParams }: { searchParams: { t?: string } }
         </div>
         
         <div className="flex gap-4 justify-center">
-          <button 
-            onClick={() => window.location.reload()} 
-            className="px-6 py-3 bg-[#415cff] text-white rounded-lg hover:bg-[#3648e6] transition-colors"
-          >
-            Refresh Task
-          </button>
+          <RefreshButton />
           <a 
             href="/ai-reactions/generate"
             className="px-6 py-3 bg-[#28a745] text-white rounded-lg hover:bg-[#218838] transition-colors"
