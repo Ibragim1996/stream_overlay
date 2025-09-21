@@ -97,6 +97,7 @@ async function OverlayContent({ searchParams }: { searchParams: { t?: string } }
           <p>✅ Server-side rendering working</p>
           <p>✅ API calls working</p>
           <p>✅ Token validation working</p>
+          <p>✅ Client Component onClick fixed</p>
         </div>
       </div>
     </div>
