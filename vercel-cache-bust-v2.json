@@ -1,0 +1,11 @@
+{
+  "version": "2025-01-20-v3-cache-bust",
+  "description": "Force Vercel to update cache after overlay fixes",
+  "timestamp": "2025-01-20T23:00:00Z",
+  "changes": [
+    "Fixed overlay to use 'key' parameter instead of 't'",
+    "Added proper ErrorBoundary",
+    "Fixed useSearchParams with Suspense",
+    "Added window guards for client-side safety"
+  ]
+}
