@@ -1,0 +1,5 @@
+{
+  "version": "2025-01-20-v2",
+  "description": "Cache busting file to force Vercel to update after repository reconnection",
+  "timestamp": "2025-01-20T22:30:00Z"
+}

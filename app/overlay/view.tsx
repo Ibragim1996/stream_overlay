@@ -1,7 +1,7 @@
 // app/overlay/view.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { MODE_OPTIONS, type Mode } from '@/lib/mode';
 import OverlayClient from './OverlayClient';
 
@@ -45,7 +45,7 @@ async function saveState(token: string, patch: OverlayState): Promise<void> {
   }).catch(() => void 0);
 }
 
-export default function OverlayView() {
+function OverlayViewContent() {
   const [token, setToken] = useState('');
   const [mode, setMode] = useState<Mode>('motivator');
   const [auto, setAuto] = useState(false);
@@ -153,5 +153,20 @@ export default function OverlayView() {
         if (token) saveState(token, { seconds: s });
       }}
     />
+  );
+}
+
+export default function OverlayView() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0b1020] flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="w-8 h-8 border-2 border-[#415cff] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p>Loading overlay...</p>
+        </div>
+      </div>
+    }>
+      <OverlayViewContent />
+    </Suspense>
   );
 }
