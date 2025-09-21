@@ -47,7 +47,7 @@ async function saveState(token: string, patch: OverlayState): Promise<void> {
 
 function OverlayViewContent() {
   const [token, setToken] = useState('');
-  const [mode, setMode] = useState<Mode>('motivator');
+  const [mode, setMode] = useState<Mode>('motivator' as Mode);
   const [auto, setAuto] = useState(false);
   const [intervalSec, setIntervalSec] = useState(15);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -68,7 +68,7 @@ function OverlayViewContent() {
       console.log('🔍 URL params:', { urlToken, urlMode, urlAuto, urlSec });
       
       setToken(urlToken);
-      setMode((urlMode && MODE_OPTIONS.some(o => o.key === urlMode) ? urlMode : null) ?? 'motivator');
+      setMode((urlMode && MODE_OPTIONS.some(o => o.key === urlMode) ? urlMode : 'motivator') as Mode);
       setAuto(urlAuto === '1');
       setIntervalSec(urlSec ? parseInt(urlSec, 10) : 15);
       setIsInitialized(true);
@@ -137,21 +137,10 @@ function OverlayViewContent() {
 
   return (
     <OverlayClient
-      token={token}
+      name={token}
       mode={mode}
       auto={auto}
       intervalSec={intervalSec}
-      onModeChange={onChangeMode}
-      onAutoChange={(a) => {
-        setAuto(a);
-        setSearchParam('a', a ? '1' : null);
-        if (token) saveState(token, { auto: a });
-      }}
-      onIntervalChange={(s) => {
-        setIntervalSec(s);
-        setSearchParam('s', s.toString());
-        if (token) saveState(token, { seconds: s });
-      }}
     />
   );
 }
