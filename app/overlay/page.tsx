@@ -2,9 +2,13 @@
 
 import React, { Suspense } from 'react';
 import OverlayView from './view';
+import { FORCE_UPDATE_VERSION } from './force-update';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
+
+// Force Vercel to update
+console.log('Overlay version:', FORCE_UPDATE_VERSION);
 
 // Error Boundary Component
 class OverlayErrorBoundary extends React.Component {
