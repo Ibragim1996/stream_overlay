@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
+import OverlayErrorBoundary from './ErrorBoundary';
 import './overlay.css';
 
 // Force dynamic rendering
@@ -99,7 +100,15 @@ function OverlayContent() {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Error parsing JSON response:', parseError);
+        setTask('Error parsing server response');
+        return;
+      }
+      
       setTask(data.task || 'No task available');
       
       // Speak the task if voice is enabled
@@ -122,11 +131,12 @@ function OverlayContent() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/api/ws?key=${encodeURIComponent(key)}`;
       
+      console.log('Connecting to WebSocket:', wsUrl);
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 
       socket.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected successfully');
       };
 
       socket.onmessage = (event) => {
@@ -147,12 +157,14 @@ function OverlayContent() {
         console.error('WebSocket error:', error);
       };
 
-      socket.onclose = () => {
-        console.log('WebSocket disconnected');
+      socket.onclose = (event) => {
+        console.log('WebSocket disconnected:', event.code, event.reason);
       };
 
       return () => {
-        socket.close();
+        if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+          socket.close();
+        }
         socketRef.current = null;
       };
     } catch (error) {
@@ -408,33 +420,35 @@ function OverlayContent() {
 
 export default function OverlayPage() {
   return (
-    <Suspense
-      fallback={
-        <div style={{
-          minHeight: '100vh',
-          background: '#0b1020',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: 'Arial, sans-serif',
-          color: 'white'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              border: '2px solid #415cff',
-              borderTop: '2px solid transparent',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 16px'
-            }} />
-            <p>Loading overlay...</p>
+    <OverlayErrorBoundary>
+      <Suspense
+        fallback={
+          <div style={{
+            minHeight: '100vh',
+            background: '#0b1020',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'Arial, sans-serif',
+            color: 'white'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                border: '2px solid #415cff',
+                borderTop: '2px solid transparent',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 16px'
+              }} />
+              <p>Loading overlay...</p>
+            </div>
           </div>
-        </div>
-      }
-    >
-      <OverlayContent />
-    </Suspense>
+        }
+      >
+        <OverlayContent />
+      </Suspense>
+    </OverlayErrorBoundary>
   );
 }

@@ -1,0 +1,16 @@
+{
+  "name": "SECO Overlay",
+  "short_name": "SECO",
+  "description": "AI overlay for streamers",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1020",
+  "theme_color": "#415cff",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
