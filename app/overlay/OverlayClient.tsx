@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 type Mode = "funny" | "serious" | "chill" | "street";
@@ -15,9 +15,16 @@ const VOICE_OPTIONS = [
   { key: "shimmer" as Voice, label: "Shimmer", emoji: "✨", style: "Soft & Gentle" },
 ];
 
-export default function OverlayClient() {
+function OverlayContent() {
   const searchParams = useSearchParams();
-  const key = searchParams.get('key');
+  // Accept multiple key parameter names (case-insensitive)
+  const key = searchParams.get('key') || 
+              searchParams.get('k') || 
+              searchParams.get('t') || 
+              searchParams.get('token') ||
+              searchParams.get('K') ||
+              searchParams.get('T') ||
+              searchParams.get('TOKEN');
   
   const [task, setTask] = useState<string>("Loading...");
   const [loading, setLoading] = useState(false);
@@ -368,5 +375,36 @@ export default function OverlayClient() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function OverlayClient() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: '100vh',
+        background: '#0b1020',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'Arial, sans-serif',
+        color: 'white'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            border: '2px solid #415cff',
+            borderTop: '2px solid transparent',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }}></div>
+          <p>Loading overlay...</p>
+        </div>
+      </div>
+    }>
+      <OverlayContent />
+    </Suspense>
   );
 }

@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server';
 
+// Ensure this runs in Node.js runtime for WebSocket support
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
   const upgrade = request.headers.get('upgrade');
   
