@@ -34,7 +34,15 @@ export default function PremiumClient() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const un = onAuthStateChanged(getAuth(), (u) => {
+    const auth = getAuth();
+    if (!auth) {
+      console.warn('[PremiumClient] Firebase auth not available');
+      setIsAuthed(false);
+      setLoading(false);
+      return;
+    }
+    
+    const un = onAuthStateChanged(auth, (u) => {
       setIsAuthed(!!u);
       if (u) {
         fetchSubscriptionStatus(u);
@@ -70,6 +78,11 @@ export default function PremiumClient() {
   async function openBillingPortal() {
     try {
       const auth = getAuth();
+      if (!auth) {
+        console.warn('[PremiumClient] Firebase auth not available for billing');
+        return;
+      }
+      
       const user = auth.currentUser;
       if (!user) return;
 

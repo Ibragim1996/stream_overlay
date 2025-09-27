@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export function middleware(req: NextRequest) {
-  // не трогаем статические и api
+  // не трогаем статические файлы, api, manifest и иконки
   const path = req.nextUrl.pathname;
-  if (path.startsWith('/_next') || path.startsWith('/api') || path.startsWith('/favicon')) {
+  if (
+    path.startsWith('/_next') || 
+    path.startsWith('/api') || 
+    path.startsWith('/favicon') ||
+    path.startsWith('/static') ||
+    path.startsWith('/images') ||
+    path.startsWith('/icons') ||
+    path === '/site.webmanifest' ||
+    path === '/robots.txt' ||
+    path === '/sitemap.xml' ||
+    path.match(/\.(ico|png|jpg|jpeg|gif|svg|webp|woff|woff2|ttf|eot)$/)
+  ) {
     return NextResponse.next();
   }
 

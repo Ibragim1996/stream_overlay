@@ -12,6 +12,13 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const auth = getAuthClient();
+    if (!auth) {
+      console.warn('[RequireAuth] Firebase auth not available, redirecting to sign-in');
+      router.replace('/sign-in');
+      setReady(true);
+      return;
+    }
+    
     const unsub = onAuthStateChanged(auth, (u) => {
       if (!u) router.replace('/sign-in');
       setReady(true);

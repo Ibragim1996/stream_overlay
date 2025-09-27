@@ -14,6 +14,11 @@ export default function Header() {
 
   useEffect(() => {
     const auth = getAuthClient();
+    if (!auth) {
+      console.warn('[Header] Firebase auth not available');
+      return;
+    }
+    
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsub();
   }, []);
@@ -24,6 +29,12 @@ export default function Header() {
   async function handleLogout() {
     try {
       const auth = getAuthClient();
+      if (!auth) {
+        console.warn('[Header] Firebase auth not available for logout');
+        router.replace('/sign-in');
+        return;
+      }
+      
       await signOut(auth);
       router.replace('/sign-in');
     } catch (e) {

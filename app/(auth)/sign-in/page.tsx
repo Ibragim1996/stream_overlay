@@ -59,7 +59,11 @@ export default function SignInPage() {
 
   // Завершаем redirect-поток и делаем auth gate
   useEffect(() => {
-    const auth: Auth = getAuthClient();
+    const auth: Auth | null = getAuthClient();
+    if (!auth) {
+      console.warn('[SignIn] Firebase auth not available');
+      return;
+    }
 
     // Если уже авторизован — отправляем на главную
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -84,6 +88,11 @@ export default function SignInPage() {
       setLoading(true);
       setErr(null);
       const auth = getAuthClient();
+      if (!auth) {
+        setErr('Authentication service not available');
+        return;
+      }
+      
       await signInWithEmailAndPassword(auth, email.trim(), password);
       router.replace('/');
     } catch (e: unknown) {
@@ -99,6 +108,11 @@ export default function SignInPage() {
       setLoading(true);
       setErr(null);
       const auth = getAuthClient();
+      if (!auth) {
+        setErr('Authentication service not available');
+        return;
+      }
+      
       await createUserWithEmailAndPassword(auth, email.trim(), password);
       router.replace('/');
     } catch (e: unknown) {
@@ -114,6 +128,11 @@ export default function SignInPage() {
       setLoading(true);
       setErr(null);
       const auth = getAuthClient();
+      if (!auth) {
+        setErr('Authentication service not available');
+        return;
+      }
+      
       await signInWithPopup(auth, provider);
       router.replace('/');
     } catch (e: unknown) {
@@ -123,6 +142,10 @@ export default function SignInPage() {
       if (fe.code === 'auth/popup-closed-by-user' || fe.code === 'auth/popup-blocked') {
         setInfo(friendly(fe.code));
         const auth = getAuthClient();
+        if (!auth) {
+          setErr('Authentication service not available');
+          return;
+        }
         await signInWithRedirect(auth, provider);
         return;
       }
