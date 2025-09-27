@@ -22,7 +22,8 @@ const VOICE_OPTIONS = [
 
 function OverlayContent() {
   const searchParams = useSearchParams();
-  // Accept multiple key parameter names (case-insensitive)
+  
+  // Get key from URL parameters
   const key = searchParams.get('key') || 
               searchParams.get('k') || 
               searchParams.get('t') || 
@@ -38,7 +39,6 @@ function OverlayContent() {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 50, y: 85 });
   const [showPanel, setShowPanel] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastSpokenTask, setLastSpokenTask] = useState<string>("");
