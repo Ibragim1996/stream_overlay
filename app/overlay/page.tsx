@@ -87,8 +87,8 @@ function OverlayContent() {
     );
   }
 
-  // Only initialize heavy components when key is present
-  return <OverlayCore key={key} />;
+          // Only initialize heavy components when key is present
+          return <OverlayCore overlayKey={key} />;
 }
 
 export default function OverlayPage() {

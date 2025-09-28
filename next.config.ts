@@ -22,10 +22,10 @@ const config: NextConfig = {
             key: 'Content-Security-Policy',
             // добавляй сюда хосты студий, где будет встраиваться оверлей
             value:
-              "frame-ancestors 'self' https://vdo.ninja https://app.restream.io https://studio.golightstream.com https://streamyard.com; default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' wss: ws: https:; font-src 'self' data:;",
+              "frame-ancestors 'self' https://vdo.ninja https://app.restream.io https://studio.golightstream.com https://streamyard.com https://obsproject.com https://streamlabs.com; default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' wss: ws: https:; font-src 'self' data:; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
           { key: 'Referrer-Policy', value: 'no-referrer' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=()' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
         ],
       },
       {

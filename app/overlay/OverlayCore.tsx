@@ -15,10 +15,10 @@ const VOICE_OPTIONS = [
 ];
 
 interface OverlayCoreProps {
-  key: string;
+  overlayKey: string;
 }
 
-export default function OverlayCore({ key }: OverlayCoreProps) {
+export default function OverlayCore({ overlayKey }: OverlayCoreProps) {
   const [task, setTask] = useState<string>("Loading...");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>("funny");
@@ -62,7 +62,7 @@ export default function OverlayCore({ key }: OverlayCoreProps) {
 
   // Fetch task from API - only when key is present
   const fetchTask = useCallback(async () => {
-    if (!key) return;
+    if (!overlayKey) return;
     
     setLoading(true);
     try {
@@ -70,7 +70,7 @@ export default function OverlayCore({ key }: OverlayCoreProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token: key,
+          token: overlayKey,
           mode: mode,
           voice: voice,
           streamKind: 'just_chatting',
@@ -107,15 +107,15 @@ export default function OverlayCore({ key }: OverlayCoreProps) {
     } finally {
       setLoading(false);
     }
-  }, [key, mode, voice, voiceEnabled, speakText]);
+  }, [overlayKey, mode, voice, voiceEnabled, speakText]);
 
   // WebSocket connection - only when key is present
   useEffect(() => {
-    if (!key || typeof window === 'undefined') return;
+    if (!overlayKey || typeof window === 'undefined') return;
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/ws?key=${encodeURIComponent(key)}`;
+      const wsUrl = `${protocol}//${window.location.host}/api/ws?key=${encodeURIComponent(overlayKey)}`;
       
       console.log('Connecting to WebSocket:', wsUrl);
       const socket = new WebSocket(wsUrl);
@@ -156,25 +156,25 @@ export default function OverlayCore({ key }: OverlayCoreProps) {
     } catch (error) {
       console.error('WebSocket connection error:', error);
     }
-  }, [key, voiceEnabled, speakText]);
+  }, [overlayKey, voiceEnabled, speakText]);
 
   // Auto-refresh timer - only when auto mode is enabled
   useEffect(() => {
-    if (!key || !autoMode) return;
+    if (!overlayKey || !autoMode) return;
 
     const interval = setInterval(() => {
       fetchTask();
     }, intervalSec * 1000);
 
     return () => clearInterval(interval);
-  }, [key, autoMode, intervalSec, fetchTask]);
+  }, [overlayKey, autoMode, intervalSec, fetchTask]);
 
   // Initial task fetch - only when key is present
   useEffect(() => {
-    if (key) {
+    if (overlayKey) {
       fetchTask();
     }
-  }, [key, fetchTask]);
+  }, [overlayKey, fetchTask]);
 
   // Next task function
   const handleNextTask = useCallback(() => {

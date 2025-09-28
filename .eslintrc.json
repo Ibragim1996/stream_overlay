@@ -1,30 +1,26 @@
 {
-  "root": true,
   "extends": ["next/core-web-vitals"],
-  "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint", "react-hooks"],
-  "ignorePatterns": [
-    "node_modules/",
-    ".next/",
-    "out/",
-    "dist/",
-    "public/",
-    "**/*.d.ts"
-  ],
   "rules": {
-    "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/ban-ts-comment": "off",
-    "@typescript-eslint/no-unused-vars": [
-      "warn",
-      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^ignored", "caughtErrors": "none" }
-    ],
-    "react-hooks/exhaustive-deps": "warn",
-    "import/no-anonymous-default-export": "off"
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "CallExpression[callee.object.name='process'][callee.property.name='env'] > MemberExpression[property.name=/^(?!NEXT_PUBLIC_)/]",
+        "message": "Only NEXT_PUBLIC_ environment variables are allowed in client components. Use server-side code for secrets."
+      }
+    ]
   },
   "overrides": [
     {
-      "files": ["**/*.ts", "**/*.tsx"],
-      "parserOptions": { "project": false }
+      "files": ["app/**/*.tsx", "app/**/*.ts"],
+      "rules": {
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "CallExpression[callee.object.name='process'][callee.property.name='env'] > MemberExpression[property.name=/^(?!NEXT_PUBLIC_)/]",
+            "message": "SECURITY: Only NEXT_PUBLIC_ environment variables allowed in client components. Secrets must be used server-side only."
+          }
+        ]
+      }
     }
   ]
 }

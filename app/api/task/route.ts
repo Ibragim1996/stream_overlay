@@ -5,6 +5,7 @@ import { userDB } from '@/lib/user-db';
 import { withAuth } from '@/lib/auth-middleware';
 import { openai } from '@/lib/openai-realtime';
 import { buildSystemPrompt } from '@/lib/prompt-builder';
+import { taskRateLimit, createRateLimitResponse } from '@/lib/rateLimit';
 
 // ...existing code...
 
@@ -372,6 +373,12 @@ type OverlayTaskEventLocal = {
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResult = await taskRateLimit.checkLimit(req);
+    if (!rateLimitResult.allowed) {
+      return createRateLimitResponse(rateLimitResult.retryAfter!);
+    }
+
     const raw: Body = (await req.json().catch(() => ({}))) as Body;
     
     // Get user ID from token or create default
