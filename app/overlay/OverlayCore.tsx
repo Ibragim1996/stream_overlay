@@ -23,15 +23,14 @@ export default function OverlayCore({ key }: OverlayCoreProps) {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>("funny");
   const [voice, setVoice] = useState<Voice>("alloy");
-  const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 50, y: 85 });
-  const [showPanel, setShowPanel] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastSpokenTask, setLastSpokenTask] = useState<string>("");
+  const [autoMode, setAutoMode] = useState(false);
+  const [intervalSec, setIntervalSec] = useState(15);
+  const [showPanel, setShowPanel] = useState(false);
   
   const timerRef = useRef<number | null>(null);
-  const dragRef = useRef<{ startX: number; startY: number; startPos: { x: number; y: number } } | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
   // Voice synthesis function - only loaded when needed
@@ -159,16 +158,16 @@ export default function OverlayCore({ key }: OverlayCoreProps) {
     }
   }, [key, voiceEnabled, speakText]);
 
-  // Auto-refresh timer - only when key is present
+  // Auto-refresh timer - only when auto mode is enabled
   useEffect(() => {
-    if (!key) return;
+    if (!key || !autoMode) return;
 
     const interval = setInterval(() => {
       fetchTask();
-    }, 15000); // 15 seconds
+    }, intervalSec * 1000);
 
     return () => clearInterval(interval);
-  }, [key, fetchTask]);
+  }, [key, autoMode, intervalSec, fetchTask]);
 
   // Initial task fetch - only when key is present
   useEffect(() => {
@@ -177,164 +176,227 @@ export default function OverlayCore({ key }: OverlayCoreProps) {
     }
   }, [key, fetchTask]);
 
-  // Drag functionality
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (typeof window === 'undefined') return;
-    
-    e.preventDefault();
-    setIsDragging(true);
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startPos: { ...position }
-    };
-  }, [position]);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !dragRef.current) return;
-    
-    const deltaX = e.clientX - dragRef.current.startX;
-    const deltaY = e.clientY - dragRef.current.startY;
-    
-    const newX = Math.max(0, Math.min(100, dragRef.current.startPos.x + (deltaX / window.innerWidth) * 100));
-    const newY = Math.max(0, Math.min(100, dragRef.current.startPos.y + (deltaY / window.innerHeight) * 100));
-    
-    setPosition({ x: newX, y: newY });
-  }, [isDragging]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    dragRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  // Next task function
+  const handleNextTask = useCallback(() => {
+    fetchTask();
+  }, [fetchTask]);
 
   return (
-    <div
-      id="overlay-root"
-      style={{
-        position: 'fixed',
-        left: `${position.x}%`,
-        top: `${position.y}%`,
-        transform: 'translate(-50%, -50%)',
-        zIndex: 9999,
-        cursor: isDragging ? 'grabbing' : 'grab',
-        userSelect: 'none'
-      }}
-      onMouseDown={handleMouseDown}
-    >
-      <div style={{
-        background: 'rgba(10, 14, 28, 0.95)',
-        padding: '20px',
-        borderRadius: '15px',
-        border: '1px solid #243058',
-        minWidth: '300px',
-        maxWidth: '500px',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-      }}>
+    <>
+      {/* TASK DISPLAY - Visible to everyone (viewers and user) */}
+      <div
+        style={{
+          position: 'fixed',
+          left: '50%',
+          top: '85%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 9998,
+          userSelect: 'none',
+          pointerEvents: 'none' // Prevent interaction with task display
+        }}
+      >
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '15px'
+          background: 'rgba(10, 14, 28, 0.95)',
+          padding: '20px',
+          borderRadius: '15px',
+          border: '1px solid #243058',
+          minWidth: '300px',
+          maxWidth: '500px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          textAlign: 'center'
         }}>
-          <h3 style={{ margin: 0, fontSize: '18px', color: '#8bd0ff' }}>🎯 AI Overlay</h3>
-          <button
-            onClick={() => setShowPanel(!showPanel)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#8bd0ff',
-              cursor: 'pointer',
-              fontSize: '16px'
-            }}
-          >
-            {showPanel ? '−' : '+'}
-          </button>
-        </div>
-        
-        <div style={{
-          fontSize: '16px',
-          color: '#66ff66',
-          marginBottom: '15px',
-          minHeight: '40px',
-          display: 'flex',
-          alignItems: 'center'
-        }}>
-          {loading ? 'Loading...' : task}
-        </div>
-        
-        {showPanel && (
           <div style={{
-            borderTop: '1px solid #243058',
-            paddingTop: '15px',
-            marginTop: '15px'
+            fontSize: '18px',
+            color: '#66ff66',
+            minHeight: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}>
-            <div style={{ marginBottom: '10px' }}>
-              <label style={{ fontSize: '14px', color: '#ccc', marginRight: '10px' }}>
-                Voice:
-              </label>
-              <select
-                value={voice}
-                onChange={(e) => setVoice(e.target.value as Voice)}
-                style={{
-                  background: '#1a1f3a',
-                  color: 'white',
-                  border: '1px solid #243058',
-                  borderRadius: '5px',
-                  padding: '5px'
-                }}
-              >
-                {VOICE_OPTIONS.map(option => (
-                  <option key={option.key} value={option.key}>
-                    {option.emoji} {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div style={{ marginBottom: '10px' }}>
-              <label style={{ fontSize: '14px', color: '#ccc', marginRight: '10px' }}>
-                <input
-                  type="checkbox"
-                  checked={voiceEnabled}
-                  onChange={(e) => setVoiceEnabled(e.target.checked)}
-                  style={{ marginRight: '5px' }}
-                />
-                Enable Voice
-              </label>
-            </div>
-            
+            {loading ? 'Loading...' : task}
+          </div>
+        </div>
+      </div>
+
+      {/* CONTROL PANEL - Only visible to user (small panel in corner) */}
+      <div
+        style={{
+          position: 'fixed',
+          right: '20px',
+          bottom: '20px',
+          zIndex: 9999,
+          userSelect: 'none'
+        }}
+      >
+        <div style={{
+          background: 'rgba(10, 14, 28, 0.95)',
+          padding: '15px',
+          borderRadius: '10px',
+          border: '1px solid #243058',
+          minWidth: '200px',
+          boxShadow: '0 5px 20px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '10px'
+          }}>
+            <h4 style={{ margin: 0, fontSize: '14px', color: '#8bd0ff' }}>Control Panel</h4>
             <button
-              onClick={fetchTask}
+              onClick={() => setShowPanel(!showPanel)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#8bd0ff',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              {showPanel ? '−' : '+'}
+            </button>
+          </div>
+          
+          {/* Always visible controls */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+            <button
+              onClick={handleNextTask}
               disabled={loading}
               style={{
                 background: loading ? '#666' : '#415cff',
                 color: 'white',
                 border: 'none',
                 borderRadius: '5px',
-                padding: '8px 16px',
+                padding: '6px 12px',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: '14px'
+                fontSize: '12px',
+                flex: 1
               }}
             >
-              {loading ? 'Loading...' : 'Refresh Task'}
+              {loading ? 'Loading...' : 'Next'}
             </button>
+            
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px',
+              fontSize: '12px',
+              color: '#ccc',
+              cursor: 'pointer'
+            }}>
+              <input
+                type="checkbox"
+                checked={voiceEnabled}
+                onChange={(e) => setVoiceEnabled(e.target.checked)}
+                style={{ margin: 0 }}
+              />
+              Voice
+            </label>
           </div>
-        )}
+          
+          {/* Expandable panel */}
+          {showPanel && (
+            <div style={{
+              borderTop: '1px solid #243058',
+              paddingTop: '10px',
+              marginTop: '10px'
+            }}>
+              <div style={{ marginBottom: '8px' }}>
+                <label style={{ fontSize: '12px', color: '#ccc', marginRight: '8px' }}>
+                  Voice:
+                </label>
+                <select
+                  value={voice}
+                  onChange={(e) => setVoice(e.target.value as Voice)}
+                  style={{
+                    background: '#1a1f3a',
+                    color: 'white',
+                    border: '1px solid #243058',
+                    borderRadius: '3px',
+                    padding: '3px',
+                    fontSize: '11px',
+                    width: '100%'
+                  }}
+                >
+                  {VOICE_OPTIONS.map(option => (
+                    <option key={option.key} value={option.key}>
+                      {option.emoji} {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div style={{ marginBottom: '8px' }}>
+                <label style={{ fontSize: '12px', color: '#ccc', marginRight: '8px' }}>
+                  Mode:
+                </label>
+                <select
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value as Mode)}
+                  style={{
+                    background: '#1a1f3a',
+                    color: 'white',
+                    border: '1px solid #243058',
+                    borderRadius: '3px',
+                    padding: '3px',
+                    fontSize: '11px',
+                    width: '100%'
+                  }}
+                >
+                  <option value="funny">😄 Funny</option>
+                  <option value="serious">😐 Serious</option>
+                  <option value="chill">😌 Chill</option>
+                  <option value="street">😎 Street</option>
+                </select>
+              </div>
+              
+              <div style={{ marginBottom: '8px' }}>
+                <label style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '4px',
+                  fontSize: '12px',
+                  color: '#ccc',
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={autoMode}
+                    onChange={(e) => setAutoMode(e.target.checked)}
+                    style={{ margin: 0 }}
+                  />
+                  Auto Mode
+                </label>
+              </div>
+              
+              {autoMode && (
+                <div style={{ marginBottom: '8px' }}>
+                  <label style={{ fontSize: '12px', color: '#ccc', marginRight: '8px' }}>
+                    Interval:
+                  </label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="60"
+                    value={intervalSec}
+                    onChange={(e) => setIntervalSec(parseInt(e.target.value) || 15)}
+                    style={{
+                      background: '#1a1f3a',
+                      color: 'white',
+                      border: '1px solid #243058',
+                      borderRadius: '3px',
+                      padding: '3px',
+                      fontSize: '11px',
+                      width: '60px'
+                    }}
+                  />
+                  <span style={{ fontSize: '11px', color: '#888', marginLeft: '4px' }}>sec</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
