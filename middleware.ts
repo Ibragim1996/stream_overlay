@@ -11,9 +11,11 @@ export function middleware(req: NextRequest) {
     path.startsWith('/images') ||
     path.startsWith('/icons') ||
     path === '/site.webmanifest' ||
+    path === '/favicon.ico' ||
     path === '/robots.txt' ||
     path === '/sitemap.xml' ||
-    path.match(/\.(ico|png|jpg|jpeg|gif|svg|webp|woff|woff2|ttf|eot)$/)
+    path === '/health' ||
+    path.match(/\.(ico|png|jpg|jpeg|gif|svg|webp|woff|woff2|ttf|eot|css|js|map)$/)
   ) {
     return NextResponse.next();
   }
