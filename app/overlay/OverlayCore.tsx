@@ -19,7 +19,7 @@ interface OverlayCoreProps {
 }
 
 export default function OverlayCore({ overlayKey }: OverlayCoreProps) {
-  const [task, setTask] = useState<string>("Loading...");
+  const [task, setTask] = useState<string>("Welcome to AI Overlay! Click Next to generate a task.");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>("funny");
   const [voice, setVoice] = useState<Voice>("alloy");
@@ -60,120 +60,6 @@ export default function OverlayCore({ overlayKey }: OverlayCoreProps) {
     }
   }, [voiceEnabled, isSpeaking, lastSpokenTask, voice]);
 
-  // Play audio from URL (emotional TTS)
-  const playAudioFromUrl = useCallback(async (audioUrl: string) => {
-    if (!voiceEnabled || isSpeaking) return;
-    
-    if (typeof window === 'undefined') return;
-    
-    try {
-      setIsSpeaking(true);
-      
-      const audio = new Audio(audioUrl);
-      audio.volume = 1.0;
-      
-      await new Promise<void>((resolve, reject) => {
-        audio.onended = () => resolve();
-        audio.onerror = () => reject(new Error('Audio playback failed'));
-        audio.play();
-      });
-      
-      console.log('Emotional audio played successfully');
-    } catch (error) {
-      console.error('Audio playback error:', error);
-      // Fallback to TTS if audio fails
-      const text = task;
-      if (text) {
-        speakText(text);
-      }
-    } finally {
-      setIsSpeaking(false);
-    }
-  }, [voiceEnabled, isSpeaking, task, speakText]);
-
-  // Enhanced TTS with emotional variety
-  const speakTextWithEmotion = useCallback(async (text: string, currentMode: string) => {
-    if (!voiceEnabled || isSpeaking || text === lastSpokenTask) return;
-    
-    if (typeof window === 'undefined') return;
-    
-    try {
-      setIsSpeaking(true);
-      setLastSpokenTask(text);
-      
-      // Enhance text with emotional markers based on mode
-      let enhancedText = text;
-      
-      if (currentMode === 'funny') {
-        enhancedText = text
-          .replace(/!/g, '! *pause* ')
-          .replace(/\?/g, '? *pause* ')
-          .replace(/\./g, '. *pause* ');
-      } else if (currentMode === 'serious') {
-        enhancedText = text
-          .replace(/!/g, '.')
-          .replace(/\?/g, '? *long_pause* ');
-      } else if (currentMode === 'chill') {
-        enhancedText = text
-          .replace(/!/g, '...')
-          .replace(/\?/g, '? *pause* ');
-      } else if (currentMode === 'street') {
-        enhancedText = text
-          .replace(/!/g, '! *excited* ')
-          .replace(/\?/g, '? *surprised* ');
-      }
-      
-      const utterance = new SpeechSynthesisUtterance(enhancedText);
-      
-      // Select voice based on mode
-      const voices = speechSynthesis.getVoices();
-      let selectedVoice = null;
-      
-      if (currentMode === 'funny') {
-        selectedVoice = voices.find(v => v.name.includes('Google') && v.name.includes('Russian')) || 
-                       voices.find(v => v.name.includes('Microsoft') && v.name.includes('Russian')) ||
-                       voices[0];
-      } else if (currentMode === 'serious') {
-        selectedVoice = voices.find(v => v.name.includes('Google') && v.name.includes('Russian')) ||
-                       voices.find(v => v.name.includes('Microsoft') && v.name.includes('Russian')) ||
-                       voices[0];
-      } else {
-        selectedVoice = voices.find(v => v.name.includes(voice)) || voices[0];
-      }
-      
-      utterance.voice = selectedVoice;
-      
-      // Adjust rate and pitch based on mode
-      if (currentMode === 'funny') {
-        utterance.rate = 1.1;
-        utterance.pitch = 1.2;
-      } else if (currentMode === 'serious') {
-        utterance.rate = 0.9;
-        utterance.pitch = 0.8;
-      } else if (currentMode === 'chill') {
-        utterance.rate = 0.8;
-        utterance.pitch = 0.9;
-      } else if (currentMode === 'street') {
-        utterance.rate = 1.2;
-        utterance.pitch = 1.1;
-      } else {
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-      }
-      
-      await new Promise<void>((resolve, reject) => {
-        utterance.onend = () => resolve();
-        utterance.onerror = () => reject(new Error('Speech synthesis failed'));
-        speechSynthesis.speak(utterance);
-      });
-      
-      console.log(`Emotional TTS played for mode: ${currentMode}`);
-    } catch (error) {
-      console.error('Emotional TTS error:', error);
-    } finally {
-      setIsSpeaking(false);
-    }
-  }, [voiceEnabled, isSpeaking, lastSpokenTask, voice]);
 
   // Fetch task from API - only when key is present
   const fetchTask = useCallback(async () => {
@@ -181,14 +67,15 @@ export default function OverlayCore({ overlayKey }: OverlayCoreProps) {
     
     setLoading(true);
     try {
-      const response = await fetch('/api/tasks/next', {
+      const response = await fetch('/api/task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          overlayKey: overlayKey,
+          token: overlayKey,
           mode: mode,
-          tone: 'playful', // Добавляем тон для эмоциональности
-          voice: voice
+          voice: voice,
+          streamKind: 'just_chatting',
+          kind: 'next'
         })
       });
 
@@ -209,15 +96,11 @@ export default function OverlayCore({ overlayKey }: OverlayCoreProps) {
         return;
       }
       
-      if (data.success && data.data) {
-        setTask(data.data.text || 'No task available');
-        
-        // Speak the task if voice is enabled
-        if (voiceEnabled && data.data.text) {
-          speakText(data.data.text);
-        }
-      } else {
-        setTask(data.error || 'Failed to generate task');
+      setTask(data.task || 'No task available');
+      
+      // Speak the task if voice is enabled
+      if (voiceEnabled && data.task) {
+        speakText(data.task);
       }
     } catch (error) {
       console.error('Error fetching task:', error);
@@ -249,8 +132,7 @@ export default function OverlayCore({ overlayKey }: OverlayCoreProps) {
           if (data.type === 'task' && data.text) {
             setTask(data.text);
             if (voiceEnabled) {
-              // Use emotional TTS with enhanced text
-              speakTextWithEmotion(data.text, data.mode || mode);
+              speakText(data.text);
             }
           }
         } catch (error) {
@@ -288,46 +170,17 @@ export default function OverlayCore({ overlayKey }: OverlayCoreProps) {
     return () => clearInterval(interval);
   }, [overlayKey, autoMode, intervalSec, fetchTask]);
 
-  // Initial task fetch - only when key is present
-  useEffect(() => {
-    if (overlayKey) {
-      fetchTask();
-    }
-  }, [overlayKey, fetchTask]);
+  // Initial task fetch - only when key is present (disabled auto-fetch)
+  // useEffect(() => {
+  //   if (overlayKey) {
+  //     fetchTask();
+  //   }
+  // }, [overlayKey, fetchTask]);
 
-  // Next task function - use WebSocket for emotional voices
-  const handleNextTask = useCallback(async () => {
-    try {
-      setLoading(true);
-      
-      // Send task request via WebSocket API
-      const response = await fetch('/api/ws/send-task', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          overlayKey: overlayKey,
-          mode: mode,
-          tone: 'playful'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to send task request');
-      }
-
-      // Task will be received via WebSocket
-    } catch (error) {
-      console.error('Error sending task request:', error);
-      setTask('Failed to generate task. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [overlayKey, mode]);
+  // Next task function - use original API
+  const handleNextTask = useCallback(() => {
+    fetchTask();
+  }, [fetchTask]);
 
   return (
     <>
