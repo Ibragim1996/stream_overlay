@@ -5,6 +5,7 @@ import { buildSystemPrompt } from '@/lib/prompt-builder';
 import { ttsGenerator, type Voice } from '@/lib/tts-generator';
 import { overlayStorage, type OverlayState } from '@/lib/storage';
 import { taskRateLimit, createRateLimitResponse } from '@/lib/rateLimit';
+import { emotionalPromptGenerator } from '@/lib/emotional-prompts';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -74,33 +75,18 @@ export async function POST(req: NextRequest): Promise<NextResponse<TaskResponse>
 
     console.log(`Generating task for overlay ${overlayKey} with mode: ${mode}, tone: ${tone}, voice: ${voice}`);
 
-    // Generate text using OpenAI
-    const systemPrompt = buildSystemPrompt(mode as any, 'just_chatting' as any);
-    const userPrompt = `Generate a ${tone} task for a ${mode} stream. Make it engaging and specific.`;
+    // Генерируем эмоциональный промпт для разнообразия
+    const emotionalPrompt = emotionalPromptGenerator.generateEmotionalPrompt(mode, tone);
+    console.log(`Generated emotional prompt: "${emotionalPrompt.text}"`);
 
-    const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      max_tokens: 150,
-      temperature: 0.8,
-    });
-
-    const generatedText = completion.choices[0]?.message?.content?.trim();
-    if (!generatedText) {
-      throw new Error('Failed to generate text from OpenAI');
-    }
-
-    console.log(`Generated text: "${generatedText}"`);
-
-    // Generate TTS audio
+    // Generate TTS audio with emotional variety
     const audioBuffer = await ttsGenerator.generateSpeechWithRetry({
-      text: generatedText,
-      voice: voice,
-      speed: speed,
-      format: 'mp3'
+      text: emotionalPrompt.text,
+      voice: emotionalPrompt.voice as Voice,
+      speed: emotionalPrompt.speed,
+      format: 'mp3',
+      emotion: emotionalPrompt.emotion as any,
+      style: emotionalPrompt.style as any
     });
 
     // Store audio and get URL
@@ -110,7 +96,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<TaskResponse>
 
     // Create overlay state
     const overlayState: OverlayState = {
-      text: generatedText,
+      text: emotionalPrompt.text,
       voiceUrl: voiceUrl,
       mode: mode,
       tone: tone,

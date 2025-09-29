@@ -15,6 +15,8 @@ export default function TasksTestPage() {
   const [mode, setMode] = useState('funny');
   const [tone, setTone] = useState('playful');
   const [voice, setVoice] = useState('alloy');
+  const [emotion, setEmotion] = useState('excited');
+  const [style, setStyle] = useState('dramatic');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TaskData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,8 @@ export default function TasksTestPage() {
           mode,
           tone,
           voice,
+          emotion,
+          style,
           speed: 1.0
         })
       });
@@ -219,6 +223,56 @@ export default function TasksTestPage() {
                 <option value="onyx">💎 Onyx</option>
                 <option value="nova">⭐ Nova</option>
                 <option value="shimmer">✨ Shimmer</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                Emotion:
+              </label>
+              <select
+                value={emotion}
+                onChange={(e) => setEmotion(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  background: '#1a1f3a',
+                  color: 'white',
+                  border: '1px solid #243058',
+                  borderRadius: '5px'
+                }}
+              >
+                <option value="excited">😆 Excited</option>
+                <option value="calm">😌 Calm</option>
+                <option value="cheerful">😊 Cheerful</option>
+                <option value="sad">😢 Sad</option>
+                <option value="angry">😠 Angry</option>
+                <option value="fearful">😨 Fearful</option>
+                <option value="disgusted">🤢 Disgusted</option>
+                <option value="surprised">😲 Surprised</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                Style:
+              </label>
+              <select
+                value={style}
+                onChange={(e) => setStyle(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  background: '#1a1f3a',
+                  color: 'white',
+                  border: '1px solid #243058',
+                  borderRadius: '5px'
+                }}
+              >
+                <option value="natural">🗣️ Natural</option>
+                <option value="dramatic">🎭 Dramatic</option>
+                <option value="conversational">💬 Conversational</option>
+                <option value="storytelling">📖 Storytelling</option>
               </select>
             </div>
           </div>
