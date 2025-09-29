@@ -45,6 +45,35 @@
 | `VERCEL_DEPLOYMENT_ID` | ID деплоя | `dpl_1234567890` |
 | `VERCEL_ENV` | Окружение | `production`, `preview`, `development` |
 
+## 🤖 OPENAI
+
+Переменные для работы с OpenAI API.
+
+| Переменная | Описание | Где используется |
+|------------|----------|------------------|
+| `OPENAI_API_KEY` | API ключ OpenAI | Генерация текста и TTS |
+| `OPENAI_MODEL` | Модель для генерации текста | `gpt-4o-mini` (по умолчанию) |
+
+## 🗄️ REDIS/UPSTASH
+
+Переменные для работы с Redis.
+
+| Переменная | Описание | Где используется |
+|------------|----------|------------------|
+| `UPSTASH_REDIS_REST_URL` | URL Redis REST API | Хранение состояния overlay |
+| `UPSTASH_REDIS_REST_TOKEN` | Токен для Redis API | Аутентификация в Redis |
+
+## 📁 STORAGE/CDN
+
+Переменные для хранения файлов.
+
+| Переменная | Описание | Где используется |
+|------------|----------|------------------|
+| `NEXT_PUBLIC_CDN_URL` | URL CDN для аудио файлов | Клиентская часть для TTS |
+| `STORAGE_BUCKET_NAME` | Имя бакета для файлов | Серверная часть (опционально) |
+| `STORAGE_ACCESS_KEY` | Ключ доступа к хранилищу | Серверная часть (опционально) |
+| `STORAGE_SECRET_KEY` | Секретный ключ хранилища | Серверная часть (опционально) |
+
 ## 🔧 РАЗРАБОТКА
 
 Переменные для локальной разработки.
@@ -72,6 +101,17 @@ FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"ibra-projec
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+# OpenAI
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
+
+# Redis/Upstash
+UPSTASH_REDIS_REST_URL=https://...
+UPSTASH_REDIS_REST_TOKEN=...
+
+# Storage/CDN
+NEXT_PUBLIC_CDN_URL=https://your-cdn.com
 ```
 
 ## 🚨 ВАЖНЫЕ ЗАМЕЧАНИЯ
