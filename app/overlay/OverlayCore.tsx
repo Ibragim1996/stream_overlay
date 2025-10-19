@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { getFirebaseApp } from '@/lib/firebaseClient';
+import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
 
 type Mode = "funny" | "serious" | "chill" | "street";
 type Voice = "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer";
@@ -20,10 +22,11 @@ interface OverlayCoreProps {
 
 export default function OverlayCore({ overlayKey }: OverlayCoreProps) {
   const [task, setTask] = useState<string>("Welcome to AI Overlay! Click Next to generate a task.");
+  const [voiceUrl, setVoiceUrl] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>("funny");
   const [voice, setVoice] = useState<Voice>("alloy");
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastSpokenTask, setLastSpokenTask] = useState<string>("");
   const [autoMode, setAutoMode] = useState(false);
@@ -31,133 +34,161 @@ export default function OverlayCore({ overlayKey }: OverlayCoreProps) {
   const [showPanel, setShowPanel] = useState(false);
   
   const timerRef = useRef<number | null>(null);
-  const socketRef = useRef<WebSocket | null>(null);
 
-  // Voice synthesis function - only loaded when needed
-  const speakText = useCallback(async (text: string) => {
-    if (!voiceEnabled || isSpeaking || text === lastSpokenTask) return;
-    
+  // Play audio from server-generated TTS with text synchronization
+  const playAudioFromUrl = useCallback(async (audioUrl: string, taskText: string) => {
+    if (!voiceEnabled || isSpeaking) return;
     if (typeof window === 'undefined') return;
     
     try {
       setIsSpeaking(true);
-      setLastSpokenTask(text);
       
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.voice = speechSynthesis.getVoices().find(v => v.name.includes(voice)) || null;
-      utterance.rate = 0.9;
-      utterance.pitch = 1.0;
+      // Show text immediately when audio starts
+      if (taskText) {
+        setTask(taskText);
+      }
+      
+      const audio = new Audio(audioUrl);
+      audio.preload = 'auto';
+      audio.volume = 1.0;
       
       await new Promise<void>((resolve, reject) => {
-        utterance.onend = () => resolve();
-        utterance.onerror = () => reject(new Error('Speech synthesis failed'));
-        speechSynthesis.speak(utterance);
+        audio.onended = () => resolve();
+        audio.onerror = () => reject(new Error('Audio playback failed'));
+        audio.play();
       });
+      
+      console.log('Realistic TTS audio played successfully');
     } catch (error) {
-      console.error('Speech synthesis error:', error);
+      console.error('Audio playback error:', error);
     } finally {
       setIsSpeaking(false);
     }
-  }, [voiceEnabled, isSpeaking, lastSpokenTask, voice]);
+  }, [voiceEnabled, isSpeaking]);
 
+  // Firestore realtime subscription (no WebSocket)
+  useEffect(() => {
+    if (!overlayKey) return;
+    const app = getFirebaseApp();
+    if (!app) {
+      console.warn('[overlay] Firebase not initialized; set NEXT_PUBLIC_FIREBASE_*');
+      return;
+    }
+    const db = getFirestore(app);
+    const ref = doc(db, `overlays/${overlayKey}/state`, 'current');
+    const unsub = onSnapshot(ref, (snap) => {
+      const data = snap.data() as any;
+      if (!data) return;
+      const nextText = String(data.text ?? '').trim();
+      const nextVoice = String(data.voiceUrl ?? '').trim();
+      if (nextText) setTask(nextText);
+      setVoiceUrl(nextVoice);
+      if (nextVoice && voiceEnabled) {
+        // Auto-play the TTS audio with text synchronization
+        playAudioFromUrl(nextVoice, nextText);
+      }
+    }, (err) => {
+      console.error('[overlay] Firestore onSnapshot error:', err);
+    });
+    return () => unsub();
+  }, [overlayKey, voiceEnabled, playAudioFromUrl]);
 
-  // Fetch task from API - only when key is present
+  // Fetch task from API with TTS - only when key is present
   const fetchTask = useCallback(async () => {
     if (!overlayKey) return;
     
     setLoading(true);
+    
+    // Показываем индикатор загрузки для быстрого отклика
+    setTask("Generating task...");
+    setLoading(false);
+    
     try {
-      const response = await fetch('/api/task', {
+      console.log('[OverlayCore] Fetching task for overlayKey:', overlayKey);
+      
+      const response = await fetch('/api/tasks/next', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token: overlayKey,
+          overlayKey: overlayKey,
           mode: mode,
-          voice: voice,
-          streamKind: 'just_chatting',
-          kind: 'next'
+          tone: mode === 'funny' ? 'hype' : mode === 'serious' ? 'serious' : 'calm',
+          voiceId: voice
         })
       });
 
+      console.log('[OverlayCore] Response status:', response.status);
+
       if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        // Try to get error details from response
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+          console.error('[OverlayCore] API Error:', errorData);
+        } catch (e) {
+          console.error('[OverlayCore] Could not parse error response:', e);
+        }
+        
         if (response.status === 429) {
           setTask('Rate limit exceeded. Please try again later.');
           return;
+        } else if (response.status === 500) {
+          setTask('Server error. Using fallback task...');
+          // Show fallback task instead of error
+          const fallbackTasks = {
+            funny: "Tell chat your most controversial food opinion in 10 seconds",
+            serious: "Share one thing you learned today that changed your perspective", 
+            chill: "What's your current mood and why?",
+            street: "Yo chat, what's the most underrated thing that slaps?"
+          };
+          setTask(fallbackTasks[mode] || fallbackTasks.funny);
+          return;
         }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        
+        throw new Error(errorMessage);
       }
 
       let data;
       try {
         data = await response.json();
+        console.log('[OverlayCore] API Response:', data);
       } catch (parseError) {
-        console.error('Error parsing JSON response:', parseError);
+        console.error('[OverlayCore] Error parsing JSON response:', parseError);
         setTask('Error parsing server response');
         return;
       }
       
-      setTask(data.task || 'No task available');
-      
-      // Speak the task if voice is enabled
-      if (voiceEnabled && data.task) {
-        speakText(data.task);
+      if (data.ok && data.text) {
+        // Показываем сгенерированный текст
+        setTask(data.text);
+        console.log('[OverlayCore] Task set:', data.text);
+        console.log('[OverlayCore] Generated via:', data.via);
+        console.log('[OverlayCore] Has audio:', !!data.voiceUrl, 'Voice enabled:', voiceEnabled);
+        
+        if (data.voiceUrl && voiceEnabled) {
+          setVoiceUrl(data.voiceUrl);
+          
+          // Auto-play the audio
+          try {
+            await playAudioFromUrl(data.voiceUrl, data.text);
+          } catch (audioError) {
+            console.error('[OverlayCore] Audio playback error:', audioError);
+          }
+        } else if (!data.voiceUrl) {
+          console.log('[OverlayCore] No audio URL provided');
+        }
+      } else {
+        console.error('[OverlayCore] Invalid API response:', data);
+        setTask('Error generating task');
       }
     } catch (error) {
-      console.error('Error fetching task:', error);
-      setTask('Welcome to AI Overlay! Ready to generate tasks.');
-    } finally {
-      setLoading(false);
+      console.error('[OverlayCore] Error fetching task:', error);
     }
-  }, [overlayKey, mode, voice, voiceEnabled, speakText]);
-
-  // WebSocket connection - only when key is present
-  useEffect(() => {
-    if (!overlayKey || typeof window === 'undefined') return;
-
-    try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/ws?key=${encodeURIComponent(overlayKey)}`;
-      
-      console.log('Connecting to WebSocket:', wsUrl);
-      const socket = new WebSocket(wsUrl);
-      socketRef.current = socket;
-
-      socket.onopen = () => {
-        console.log('WebSocket connected successfully');
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'task' && data.text) {
-            setTask(data.text);
-            if (voiceEnabled) {
-              speakText(data.text);
-            }
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-
-      socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-
-      socket.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason);
-      };
-
-      return () => {
-        if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
-          socket.close();
-        }
-        socketRef.current = null;
-      };
-    } catch (error) {
-      console.error('WebSocket connection error:', error);
-    }
-  }, [overlayKey, voiceEnabled, speakText]);
+  }, [overlayKey, mode, voice, voiceEnabled, playAudioFromUrl]);
 
   // Auto-refresh timer - only when auto mode is enabled
   useEffect(() => {
@@ -170,14 +201,7 @@ export default function OverlayCore({ overlayKey }: OverlayCoreProps) {
     return () => clearInterval(interval);
   }, [overlayKey, autoMode, intervalSec, fetchTask]);
 
-  // Initial task fetch - only when key is present (disabled auto-fetch)
-  // useEffect(() => {
-  //   if (overlayKey) {
-  //     fetchTask();
-  //   }
-  // }, [overlayKey, fetchTask]);
-
-  // Next task function - use original API
+  // Next task function - use original API (temporary until /api/tasks/next)
   const handleNextTask = useCallback(() => {
     fetchTask();
   }, [fetchTask]);
@@ -189,30 +213,28 @@ export default function OverlayCore({ overlayKey }: OverlayCoreProps) {
         style={{
           position: 'fixed',
           left: '50%',
-          top: '85%',
-          transform: 'translate(-50%, -50%)',
+          bottom: '80px',
+          transform: 'translateX(-50%)',
           zIndex: 9998,
           userSelect: 'none',
           pointerEvents: 'none' // Prevent interaction with task display
         }}
       >
         <div style={{
-          background: 'rgba(10, 14, 28, 0.95)',
-          padding: '20px',
-          borderRadius: '15px',
-          border: '1px solid #243058',
+          background: 'rgba(0, 0, 0, 0.7)',
+          padding: '15px 20px',
+          borderRadius: '10px',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
           minWidth: '300px',
           maxWidth: '500px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          boxShadow: '0 5px 20px rgba(0,0,0,0.3)',
           textAlign: 'center'
         }}>
           <div style={{
-            fontSize: '18px',
-            color: '#66ff66',
-            minHeight: '40px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
+            fontSize: '16px',
+            color: '#ffffff',
+            fontWeight: '500',
+            lineHeight: '1.4'
           }}>
             {loading ? 'Loading...' : task}
           </div>

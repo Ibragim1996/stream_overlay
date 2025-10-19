@@ -3,6 +3,7 @@
 
 import { useRef, useState } from 'react';
 import RequireAuth from '@/app/components/RequireAuth';
+import { getBaseUrl } from '@/lib/config';
 
 /** Тоны (режимы) для генерации задач */
 type Mode = 'funny' | 'motivator' | 'serious' | 'chill' | 'street';
@@ -74,7 +75,7 @@ function HomePageContent() {
         s: String(Math.max(5, seconds)),
       });
 
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://stream-overlay-l96s.vercel.app';
+      const baseUrl = getBaseUrl();
       const url = `${baseUrl}/overlay?${q.toString()}`;
       setOverlayUrl(url);
       toast('Link generated');
@@ -124,17 +125,7 @@ function HomePageContent() {
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#0b1020_0%,#0c1226_100%)] text-[#e6e9f2]">
-      {/* top bar (nav отрисовывается в layout, здесь — только заголовок блока) */}
-      <header className="max-w-6xl mx-auto px-5 py-5">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-xl bg-[#1e2a5d] border border-[#2a3a7a] grid place-items-center text-xs font-bold">
-            AI
-          </div>
-          <div className="text-lg font-semibold tracking-wide">Seeko Overlay</div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-5 pb-24 grid md:grid-cols-5 gap-16 md:gap-10">
+      <main className="max-w-6xl mx-auto px-5 pb-24 pt-8 grid md:grid-cols-5 gap-16 md:gap-10">
         {/* left: setup */}
         <section className="md:col-span-3">
           <div className="rounded-2xl border border-[#243058] bg-[rgba(10,14,28,.88)] backdrop-blur p-5 md:p-6 shadow-[0_20px_60px_rgba(0,0,0,.45)]">

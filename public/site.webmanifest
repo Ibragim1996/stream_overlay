@@ -1,6 +1,6 @@
 {
-  "name": "SECO Overlay",
-  "short_name": "SECO",
+  "name": "Vibekip",
+  "short_name": "Vibekip",
   "description": "AI overlay for streamers",
   "start_url": "/",
   "display": "standalone",

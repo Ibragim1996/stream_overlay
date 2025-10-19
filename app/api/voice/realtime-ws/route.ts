@@ -3,6 +3,12 @@ import WebSocket from 'ws';
 
 export async function GET(req: NextRequest) {
   try {
+    if (process.env.NEXT_PUBLIC_USE_WEBSOCKET !== 'true') {
+      return new Response(JSON.stringify({ ok: false, error: 'websocket_disabled' }), {
+        status: 404,
+        headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+      });
+    }
     const url = new URL(req.url);
     const text = url.searchParams.get('text');
     const voice = url.searchParams.get('voice') || 'alloy';

@@ -80,6 +80,20 @@ function OverlayViewContent() {
     }
   }, []);
 
+  // Load server state when token changes
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      const server = await fetchState(token);
+      if (cancelled) return;
+      const effectiveMode = server.mode && MODE_OPTIONS.some(o => o.key === server.mode) ? server.mode : mode;
+      setMode(effectiveMode);
+      setSearchParam('m', effectiveMode);
+    })();
+    return () => { cancelled = true; };
+  }, [token, mode]);
+
   // Show error if no token provided
   if (isInitialized && !token) {
     return (
@@ -115,19 +129,6 @@ function OverlayViewContent() {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    (async () => {
-      const server = await fetchState(token);
-      if (cancelled) return;
-      const effectiveMode = server.mode && MODE_OPTIONS.some(o => o.key === server.mode) ? server.mode : mode;
-      setMode(effectiveMode);
-      setSearchParam('m', effectiveMode);
-    })();
-    return () => { cancelled = true; };
-  }, [token, mode]);
 
   async function onChangeMode(next: Mode) {
     setMode(next);

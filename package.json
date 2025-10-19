@@ -1,5 +1,5 @@
 {
-  "name": "ai_stream_new",
+  "name": "vibekip",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,16 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "ai-reactions": "node src/server/index.js",
-    "ai-reactions:dev": "nodemon src/server/index.js",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "check-leaks": "node scripts/check-bundle-leaks.js",
+    "check-firebase": "node scripts/check-firebase.js",
     "security-check": "npm run lint && npm run check-leaks"
   },
   "dependencies": {
-    "@types/ws": "^8.18.1",
     "@upstash/redis": "1.35.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
@@ -29,8 +27,7 @@
     "pino": "^9.9.5",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "stripe": "^18.5.0",
-    "ws": "^8.18.3"
+    "stripe": "^18.5.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "3.1.0",

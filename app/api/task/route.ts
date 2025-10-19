@@ -5,7 +5,7 @@ import { userDB } from '@/lib/user-db';
 import { withAuth } from '@/lib/auth-middleware';
 import { openai } from '@/lib/openai-realtime';
 import { buildSystemPrompt } from '@/lib/prompt-builder';
-import { taskRateLimit, createRateLimitResponse } from '@/lib/rateLimit';
+// removed broken import of '@/lib/rateLimit' (file no longer exists)
 
 // ...existing code...
 
@@ -373,12 +373,6 @@ type OverlayTaskEventLocal = {
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limiting
-    const rateLimitResult = await taskRateLimit.checkLimit(req);
-    if (!rateLimitResult.allowed) {
-      return createRateLimitResponse(rateLimitResult.retryAfter!);
-    }
-
     const raw: Body = (await req.json().catch(() => ({}))) as Body;
     
     // Get user ID from token or create default
@@ -391,6 +385,23 @@ export async function POST(req: NextRequest) {
     
     const userId = bearer || 'default-user';
     const user = userDB.getUser(userId);
+
+    // Rate limiting (per token/user per minute)
+    const allowed = await rateLimit(userId, 20);
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ ok: false, error: 'rate_limited', message: 'Too many requests, please slow down.' }),
+        {
+          status: 429,
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'retry-after': '60',
+            'cache-control': 'no-store',
+            'access-control-allow-origin': '*',
+          },
+        }
+      );
+    }
 
     // Check rate limits for free users
     if (!userDB.canUseTask(user.id)) {

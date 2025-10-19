@@ -2,7 +2,7 @@
 import OpenAI from 'openai';
 
 /** Общие типы (совпадают с фронтом) */
-export type Mode = 'funny' | 'motivator' | 'serious' | 'chill';
+export type Mode = 'funny' | 'motivator' | 'serious' | 'chill' | 'urban' | 'edgy';
 export type TaskType = 'question' | 'challenge' | 'just_talk' | 'joke';
 export type StreamKind = 'just_chat' | 'irl' | 'gaming' | 'music' | 'cooking';
 export type Lang = 'en' | 'ru' | 'es';
@@ -40,18 +40,24 @@ function toneHint(mode: Mode, lang: Lang): string {
       motivator: 'supportive, high-energy, hype but respectful',
       serious: 'calm, focused, concise',
       chill: 'relaxed, low-effort, cozy vibe',
+      urban: 'modern street slang, TOS-safe',
+      edgy: 'sharp/teasing, but no harassment (TOS-safe)',
     },
     ru: {
       funny: 'смешно, остроумно, слегка дерзко, но доброжелательно',
       motivator: 'поддерживающе, энергично, уважительно',
       serious: 'спокойно, по делу, кратко',
       chill: 'расслабленно, по-домашнему, без напряга',
+      urban: 'современный уличный сленг, TOS-safe',
+      edgy: 'острее/подначивание, но без травли (TOS-safe)',
     },
     es: {
       funny: 'ligero, ingenioso, un poco pícaro pero amable',
       motivator: 'apoyo, energía alta, respetuoso',
       serious: 'calmado, enfocado, conciso',
       chill: 'relajado, cómodo, sin esfuerzo',
+      urban: 'jerga urbana moderna, TOS-safe',
+      edgy: 'más agudo/sarcástico, pero sin acoso (TOS-safe)',
     },
   };
   return byLang[lang][mode];

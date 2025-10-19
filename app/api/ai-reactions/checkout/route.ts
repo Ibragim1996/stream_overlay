@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { getBaseUrl } from '@/lib/config';
 
 // Runtime configuration
 export const runtime = 'nodejs';
@@ -117,8 +118,8 @@ export async function POST(req: NextRequest) {
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://ai-stream-new.vercel.app'}/ai-reactions/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://ai-stream-new.vercel.app'}/ai-reactions/cancel?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${getBaseUrl()}/ai-reactions/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${getBaseUrl()}/ai-reactions/cancel?session_id={CHECKOUT_SESSION_ID}`,
       metadata: {
         orderId: orderId,
         streamerId: streamerId,

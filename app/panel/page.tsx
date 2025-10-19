@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { getOverlayUrl } from '@/lib/config';
 
 type Mode = "funny" | "motivator" | "serious" | "chill";
 type TaskType = "question" | "challenge" | "just_talk" | "joke";
@@ -20,6 +21,8 @@ export default function PanelPage() {
 
   // system
   const [overlayLink, setOverlayLink] = useState("");
+  const [overlayKey, setOverlayKey] = useState("");
+  const [apiBusy, setApiBusy] = useState<Status>("idle");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
 
@@ -37,39 +40,24 @@ export default function PanelPage() {
       const trimmed = name.trim();
       if (!trimmed) throw new Error("Enter streamer name");
 
-      // запрос токена
-      const r = await fetch("/api/token", {
+      // запрос overlayKey (MVP)
+      const r = await fetch("/api/overlay/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed }),
+        body: JSON.stringify({ nickname: trimmed }),
       });
 
       const data: unknown = await r.json().catch(() => ({}));
-      if (
-        !data ||
-        typeof data !== "object" ||
-        (!("overlayUrl" in data) && !("token" in data))
-      ) {
-        throw new Error("Unexpected response from /api/token");
+      if (!data || typeof data !== "object" || !("overlayKey" in data)) {
+        throw new Error("Unexpected response from /api/overlay/create");
       }
-
-      // из ответа берём готовый overlayUrl (предпочтительно), иначе собираем сами из token
-      let baseUrl = "";
-      // безопасный разбор без any и без @ts-expect-error
       const d = data as Record<string, unknown>;
-      const overlayUrlVal = d["overlayUrl"];
-
-      if (typeof overlayUrlVal === "string" && overlayUrlVal.length > 0) {
-        baseUrl = overlayUrlVal;
-      } else {
-        const tokenVal = d["token"];
-        const token = typeof tokenVal === "string" ? tokenVal : "";
-        if (!token) throw new Error("Token missing in response");
-        const origin = typeof window !== "undefined" ? window.location.origin : "";
-        baseUrl = `${origin}/overlay?t=${encodeURIComponent(token)}`;
-      }
-
-      const u = new URL(baseUrl, typeof window !== "undefined" ? window.location.href : "https://ai-stream-new.vercel.app");
+      const key = typeof d["overlayKey"] === "string" ? (d["overlayKey"] as string) : "";
+      if (!key) throw new Error("overlayKey missing in response");
+      setOverlayKey(key);
+      
+      // Use centralized overlay URL generation
+      const u = new URL(getOverlayUrl(key));
 
       // добавляем/обновляем параметры для overlay
       u.searchParams.set("m", mode);                 // tone
@@ -92,6 +80,23 @@ export default function PanelPage() {
       }
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function nextTask() {
+    if (!overlayKey) return;
+    try {
+      setApiBusy("idle");
+      const r = await fetch("/api/tasks/next", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ overlayKey, mode, tone: mode, voiceId: "alloy" }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+      setApiBusy("ok");
+    } catch (e) {
+      setApiBusy("err");
     }
   }
 
@@ -205,6 +210,9 @@ export default function PanelPage() {
             <button onClick={copyLink} disabled={!overlayLink} style={btnGhost}>
               Copy
             </button>
+            <button onClick={nextTask} disabled={!overlayKey} style={btnGhost}>
+              Next task
+            </button>
             <a
               href={overlayLink || "#"}
               target="_blank"
@@ -227,6 +235,9 @@ export default function PanelPage() {
             style={{ ...input, marginTop: 12 }}
             aria-label="Overlay link"
           />
+          {overlayKey && (
+            <div style={{ marginTop: 8, fontSize: 12, opacity: 0.8 }}>overlayKey: {overlayKey}</div>
+          )}
 
           <div style={{ marginTop: 10, fontSize: 13, opacity: 0.85 }}>
             Status:{" "}

@@ -17,6 +17,7 @@ export default function AIReactionsOverlayContent() {
   const [isMuted, setIsMuted] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
+  const USE_WS = process.env.NEXT_PUBLIC_USE_WEBSOCKET === 'true';
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const cooldownRef = useRef<boolean>(false);
 
@@ -26,7 +27,7 @@ export default function AIReactionsOverlayContent() {
       return;
     }
 
-    connectWebSocket();
+    if (USE_WS) connectWebSocket();
 
     return () => {
       if (wsRef.current) {
@@ -36,7 +37,7 @@ export default function AIReactionsOverlayContent() {
   }, [overlayKey]);
 
   const connectWebSocket = () => {
-    if (!overlayKey) return;
+    if (!USE_WS || !overlayKey) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws?key=${overlayKey}`;
@@ -58,19 +59,19 @@ export default function AIReactionsOverlayContent() {
     };
 
     wsRef.current.onclose = () => {
-      console.log('WebSocket connection closed');
+      if (USE_WS) console.log('WebSocket connection closed');
       setConnectionStatus('Disconnected');
       
       // Reconnect after 3 seconds
       setTimeout(() => {
-        if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+        if (USE_WS && (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED)) {
           connectWebSocket();
         }
       }, 3000);
     };
 
     wsRef.current.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      if (USE_WS) console.error('WebSocket error:', error);
       setConnectionStatus('Error');
     };
   };

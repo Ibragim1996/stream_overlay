@@ -50,6 +50,7 @@ function OverlayContent() {
   const timerRef = useRef<number | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; startPos: { x: number; y: number } } | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
+  const USE_WS = process.env.NEXT_PUBLIC_USE_WEBSOCKET === 'true';
 
   // Voice synthesis function
   const speakText = useCallback(async (text: string) => {
@@ -119,8 +120,9 @@ function OverlayContent() {
     }
   }, [key, mode, voice, voiceEnabled, speakText]);
 
-  // WebSocket connection
+  // WebSocket connection (guarded by env)
   useEffect(() => {
+    if (!USE_WS) return;
     if (!key || typeof window === 'undefined') return;
 
     try {
@@ -149,7 +151,9 @@ function OverlayContent() {
       };
 
       socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        if (USE_WS) {
+          console.error('WebSocket error:', error);
+        }
       };
 
       socket.onclose = () => {
@@ -161,9 +165,11 @@ function OverlayContent() {
         socketRef.current = null;
       };
     } catch (error) {
-      console.error('WebSocket connection error:', error);
+      if (USE_WS) {
+        console.error('WebSocket connection error:', error);
+      }
     }
-  }, [key, voiceEnabled, speakText]);
+  }, [key, voiceEnabled, speakText, USE_WS]);
 
   // Auto-refresh timer
   useEffect(() => {

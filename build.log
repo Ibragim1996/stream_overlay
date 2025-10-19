@@ -1,0 +1,95 @@
+
+> ai_stream_new@0.1.0 build
+> next build
+
+   ▲ Next.js 15.4.6
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 31.0s
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/38) ...
+   Generating static pages (9/38) 
+   Generating static pages (18/38) 
+   Generating static pages (28/38) 
+ ✓ Generating static pages (38/38)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    3.71 kB         140 kB
+├ ○ /_not-found                            992 B         101 kB
+├ ƒ /ai-reactions/cancel                   888 B         101 kB
+├ ○ /ai-reactions/generate               2.05 kB         102 kB
+├ ƒ /ai-reactions/overlay                1.82 kB         101 kB
+├ ƒ /ai-reactions/store/[streamer]       1.83 kB         101 kB
+├ ƒ /ai-reactions/success                  898 B         101 kB
+├ ƒ /api/account/subscription              233 B        99.8 kB
+├ ƒ /api/ai-reactions/checkout             233 B        99.8 kB
+├ ƒ /api/ai-reactions/generate             233 B        99.8 kB
+├ ƒ /api/ai-reactions/poll                 233 B        99.8 kB
+├ ƒ /api/ai-reactions/tiers                233 B        99.8 kB
+├ ƒ /api/ai-reactions/webhook              233 B        99.8 kB
+├ ƒ /api/billing/portal                    233 B        99.8 kB
+├ ƒ /api/billing/webhook                   233 B        99.8 kB
+├ ƒ /api/checkout                          233 B        99.8 kB
+├ ƒ /api/debug-env                         233 B        99.8 kB
+├ ƒ /api/events                            233 B        99.8 kB
+├ ƒ /api/events/stream                     233 B        99.8 kB
+├ ƒ /api/events/toggle                     233 B        99.8 kB
+├ ƒ /api/overlay-html                      233 B        99.8 kB
+├ ƒ /api/overlay-static                    233 B        99.8 kB
+├ ƒ /api/overlay/create                    233 B        99.8 kB
+├ ƒ /api/overlay/verify                    233 B        99.8 kB
+├ ƒ /api/ping                              233 B        99.8 kB
+├ ƒ /api/profile                           233 B        99.8 kB
+├ ƒ /api/reaction                          233 B        99.8 kB
+├ ƒ /api/redis-ping                        233 B        99.8 kB
+├ ƒ /api/state                             233 B        99.8 kB
+├ ƒ /api/subscription                      233 B        99.8 kB
+├ ƒ /api/task                              233 B        99.8 kB
+├ ƒ /api/tasks/next                        233 B        99.8 kB
+├ ƒ /api/token                             233 B        99.8 kB
+├ ƒ /api/voice/realtime                    233 B        99.8 kB
+├ ƒ /api/voice/realtime-ws                 233 B        99.8 kB
+├ ƒ /api/voice/speak                       233 B        99.8 kB
+├ ƒ /api/webhooks/stripe                   233 B        99.8 kB
+├ ○ /dashboard                           1.61 kB         101 kB
+├ ○ /debug                               1.85 kB         101 kB
+├ ○ /env-check                           1.34 kB         101 kB
+├ ○ /faq                                   165 B         103 kB
+├ ƒ /health                                233 B        99.8 kB
+├ ○ /help                                  233 B        99.8 kB
+├ ○ /legal/privacy                         233 B        99.8 kB
+├ ○ /legal/terms                           233 B        99.8 kB
+├ ○ /overlay                             75.8 kB         212 kB
+├ ƒ /overlay-api                           233 B        99.8 kB
+├ ○ /overlay-debug                        1.7 kB         101 kB
+├ ○ /overlay-final                         233 B        99.8 kB
+├ ○ /overlay-fixed                        3.3 kB         103 kB
+├ ○ /overlay-new                           843 B         104 kB
+├ ○ /overlay-simple                        233 B        99.8 kB
+├ ○ /overlay-simple-test                 1.28 kB         101 kB
+├ ○ /overlay-static                        233 B        99.8 kB
+├ ƒ /overlay-v2                            233 B        99.8 kB
+├ ○ /overlay-v3                          1.27 kB         101 kB
+├ ○ /overlay-working                       844 B         104 kB
+├ ○ /panel                               2.96 kB         106 kB
+├ ƒ /premium                             3.54 kB         139 kB
+├ ○ /settings                            2.71 kB         139 kB
+├ ○ /sign-in                             3.44 kB         143 kB
+├ ○ /test-console                         1.4 kB         101 kB
+└ ○ /test-simple                           948 B         101 kB
++ First Load JS shared by all            99.6 kB
+  ├ chunks/4bd1b696-602635ee57868870.js  54.1 kB
+  ├ chunks/5964-2a1ddd40921d073b.js      43.5 kB
+  └ other shared chunks (total)          1.94 kB
+
+
+ƒ Middleware                             32.5 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

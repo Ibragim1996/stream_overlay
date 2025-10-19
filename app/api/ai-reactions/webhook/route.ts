@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { getBaseUrl } from '@/lib/config';
 
 // Runtime configuration
 export const runtime = 'nodejs';
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest) {
 
         // Generate AI reaction with real voice
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://ai-stream-new.vercel.app'}/api/ai-reactions/generate`, {
+          const response = await fetch(`${getBaseUrl()}/api/ai-reactions/generate`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'

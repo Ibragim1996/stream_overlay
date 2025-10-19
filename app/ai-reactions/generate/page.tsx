@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { nanoid } from 'nanoid';
+import { getBaseUrl } from '@/lib/config';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ export default function GenerateAIReactionKey() {
       return;
     }
 
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://stream-overlay-l96s.vercel.app';
+    const baseUrl = getBaseUrl();
     const url = `${baseUrl}/ai-reactions/store/${streamerName.trim().toLowerCase()}`;
     setGeneratedUrl(url);
   };
@@ -152,7 +153,7 @@ export default function GenerateAIReactionKey() {
               <h3 className="text-lg font-semibold mb-4 text-yellow-400">OBS Setup</h3>
               <div className="text-sm space-y-2">
                 <p><strong>1.</strong> Use your existing overlay from the main project</p>
-                <p><strong>2.</strong> URL: <code className="bg-gray-700 px-2 py-1 rounded">https://ai-stream-new.vercel.app/overlay?token=YOUR_TOKEN</code></p>
+                <p><strong>2.</strong> URL: <code className="bg-gray-700 px-2 py-1 rounded">https://vibekip.com/overlay?token=YOUR_TOKEN</code></p>
                 <p><strong>3.</strong> AI reactions will appear automatically in your main overlay</p>
                 <p><strong>4.</strong> No additional setup needed!</p>
               </div>

@@ -1,9 +1,9 @@
 // Force dynamic rendering
-export const dynamic = 'force-dynamic';
+import { getApiUrl } from '@/lib/config';
 
 async function getTask(token: string) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://stream-overlay-six.vercel.app'}/api/task`, {
+    const response = await fetch(`${getApiUrl()}/task`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

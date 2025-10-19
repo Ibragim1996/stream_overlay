@@ -46,11 +46,13 @@ export default function Header() {
   return (
     <header className="max-w-6xl mx-auto px-5 py-5 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <Link href="/" className="flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 border border-[#415cff]/30 bg-[#415cff]/10 hover:bg-[#415cff]/20 hover:border-[#415cff]/50">
-          <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-[#415cff] to-[#8bd0ff] grid place-items-center text-xs font-bold text-white">
-            S
+        <Link href="/" className="flex items-center gap-3 px-6 py-3 rounded-2xl text-lg font-bold transition-all duration-200 border border-[#415cff]/30 bg-gradient-to-r from-[#415cff]/20 to-[#8bd0ff]/20 hover:from-[#415cff]/30 hover:to-[#8bd0ff]/30 hover:border-[#415cff]/50 shadow-lg hover:shadow-xl">
+          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#415cff] to-[#8bd0ff] grid place-items-center text-sm font-bold text-white shadow-md">
+            V
           </div>
-          <span className="text-[#415cff] hover:text-[#8bd0ff] font-semibold tracking-wide">SECO Overlay</span>
+          <span className="text-[#415cff] hover:text-[#8bd0ff] font-bold tracking-wide bg-gradient-to-r from-[#415cff] to-[#8bd0ff] bg-clip-text text-transparent">
+            Vibekip
+          </span>
         </Link>
       </div>
 
