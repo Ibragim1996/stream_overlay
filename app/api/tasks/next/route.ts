@@ -245,67 +245,27 @@ export async function POST(req: NextRequest) {
         
         const { OpenAI } = await import('openai');
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        const contentTypes = [
-          'question', 'challenge', 'story_request', 'opinion', 'fact_share', 
-          'confession', 'prediction', 'memory', 'hypothetical', 'debate'
-        ];
         
-        const randomType = contentTypes[Math.floor(Math.random() * contentTypes.length)];
-        
-        const systemPrompt = `You are generating diverse content for a streamer in Just Chatting mode. 
-
-CONTENT TYPE: ${randomType}
-MODE: ${mode}
-
-VARIETY REQUIREMENTS:
-- NEVER start with the same word twice in a row
-- NEVER end with the same word twice in a row  
-- Mix different content types: questions, challenges, stories, facts, opinions
-- Use different starting patterns: "hey", "so", "listen", "okay", "alright", "yo", "bruh", "check this", "real talk"
-- Vary endings: "thoughts?", "what do you think?", "let's hear it", "spill the tea", "no cap", "frfr", "period"
-
-STYLE GUIDELINES:
-- Use natural internet slang but vary it
-- Keep under 120 characters
-- Make it personal to the streamer
-- Be engaging and energetic
-- Avoid repetitive patterns
-
-CONTENT TYPES TO ROTATE:
-- Personal questions about experiences
-- Fun challenges or dares  
-- Story requests ("tell us about...")
-- Opinion polls ("what's your take on...")
-- Interesting facts to share
-- Hypothetical scenarios
-- Memory sharing requests
-- Debate topics
-- Predictions about future
-- Confession requests
-
-Make each response completely different from previous ones.`;
-
-        const userPrompt = `Generate a ${randomType} for a streamer in ${mode} mode. Make it unique and engaging. Avoid any repetitive patterns.`;
-
         const resp = await openai.chat.completions.create({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
+            { role: 'system', content: 'You generate natural, human-like single-line tasks for livestream overlays. Sound spontaneous, not scripted.' },
+            { role: 'user', content: prompt }
           ],
           max_tokens: 60,
-          temperature: 1.3, // Высокая температура для креативности
-          top_p: 0.9,
-          frequency_penalty: 0.5, // Избегаем повторений
-          presence_penalty: 0.3
+          temperature: 0.95, // High creativity
+          presence_penalty: 0.6, // Avoid repetition
+          frequency_penalty: 0.7 // Encourage variety
         });
         
-        text = sanitizeOneLine(resp.choices[0]?.message?.content || '');
-        via = 'openai';
+        let rawText = resp.choices[0]?.message?.content || '';
+        text = sanitizeOutput(rawText);
+        text = humanizeText(text, mode);
+        via = 'ai';
         console.log('[API] Generated human-like text:', text);
       } catch (e) {
         console.error('[API] OpenAI generation error:', e);
-        // Fallback to diverse tasks if OpenAI fails
+        // Fallback
         text = getRandomTask(mode, overlayKey);
         via = 'fallback';
         console.log('[API] Using fallback text:', text);
@@ -316,38 +276,29 @@ Make each response completely different from previous ones.`;
       via = 'fallback';
     }
 
-    // TTS synthesize - try server TTS first, fallback to no audio
-    console.log('[API] Synthesizing TTS');
+    // Save to recent tasks
+    await saveRecentTask(overlayKey, text);
+
+    // Generate TTS with ultra-human voice
+    console.log('[API] Generating ultra-human TTS');
     let voiceUrl = '';
     
     if (hasOpenAI) {
       try {
-        console.log('[API] Trying server TTS');
-        const { synthesizeRealistic } = await import('@/lib/realistic-tts');
-        const tts = await synthesizeRealistic({ text, mode, tone, persona: 'streamer' });
-        console.log('[API] TTS synthesized, buffer size:', tts.audioBuffer.length);
+        console.log('[API] Calling generateHumanTTS');
+        const ttsResult = await generateHumanTTS({
+          text,
+          mode,
+          voiceId
+        });
+        
+        console.log('[API] TTS generated successfully, size:', ttsResult.audioBuffer.length);
+        
+        // Convert to base64 data URL for inline playback
+        const base64Audio = ttsResult.audioBuffer.toString('base64');
+        voiceUrl = `data:${ttsResult.mime};base64,${base64Audio}`;
+        console.log('[API] Audio ready as data URL');
 
-        // Try to upload to storage, but don't fail if unavailable
-        if (hasStorage && hasFirebase) {
-          try {
-            console.log('[API] Uploading to storage');
-            const { uploadBufferPublic } = await import('@/lib/storage');
-            const uploaded = await uploadBufferPublic(tts.audioBuffer, tts.mime, 'tts');
-            voiceUrl = uploaded.url;
-            console.log('[API] Uploaded to:', voiceUrl);
-          } catch (e) {
-            console.error('[API] Storage upload error:', e);
-            // Create a data URL as fallback
-            const base64 = tts.audioBuffer.toString('base64');
-            voiceUrl = `data:${tts.mime};base64,${base64}`;
-            console.log('[API] Using data URL fallback');
-          }
-        } else {
-          // Create a data URL as fallback
-          const base64 = tts.audioBuffer.toString('base64');
-          voiceUrl = `data:${tts.mime};base64,${base64}`;
-          console.log('[API] Using data URL fallback (no storage)');
-        }
       } catch (e) {
         console.error('[API] TTS synthesis error:', e);
         voiceUrl = ''; // No audio fallback
