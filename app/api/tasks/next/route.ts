@@ -1,4 +1,9 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { OpenAI } from 'openai';
+import { buildHumanPrompt, sanitizeOutput, humanizeText } from '@/lib/human-prompts';
+import { generateHumanTTS } from '@/lib/ultra-human-tts';
+import type { Mode, TaskType, StreamKind } from '@/lib/human-prompts';
+import type { VoiceId } from '@/lib/ultra-human-tts';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,6 +31,60 @@ function sanitizeOneLine(s: string) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 140);
+}
+
+// Redis helper
+const getRedis = async () => {
+  try {
+    const { getRedis: getRed } = await import('@/lib/redis');
+    return getRed();
+  } catch {
+    return null;
+  }
+};
+
+// Rate limiting
+async function checkRateLimit(key: string): Promise<boolean> {
+  try {
+    const redis = await getRedis();
+    if (!redis) return true;
+    
+    const rateLimitKey = `ratelimit:${key}:${Math.floor(Date.now() / 60000)}`;
+    const count = await redis.incr(rateLimitKey);
+    await redis.expire(rateLimitKey, 60);
+    
+    return count <= 20;
+  } catch {
+    return true;
+  }
+}
+
+// Store recent tasks
+async function getRecentTasks(key: string): Promise<string[]> {
+  try {
+    const redis = await getRedis();
+    if (!redis) return [];
+    
+    const recentKey = `recent:${key}`;
+    const recent = await redis.lrange(recentKey, 0, 9);
+    return recent || [];
+  } catch {
+    return [];
+  }
+}
+
+async function saveRecentTask(key: string, task: string): Promise<void> {
+  try {
+    const redis = await getRedis();
+    if (!redis) return;
+    
+    const recentKey = `recent:${key}`;
+    await redis.lpush(recentKey, task);
+    await redis.ltrim(recentKey, 0, 19);
+    await redis.expire(recentKey, 3600 * 12);
+  } catch {
+    // Ignore
+  }
 }
 
   // Fallback tasks with diverse content types - фокус на стримера
