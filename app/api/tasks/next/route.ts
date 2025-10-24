@@ -256,29 +256,24 @@ export async function POST(req: NextRequest) {
     
     if (hasOpenAI) {
       try {
-        // Use our improved human prompt system
-        const taskType: TaskType = 'question';
-        const streamKind: StreamKind = 'just_chatting';
-        const prompt = buildHumanPrompt(mode, taskType, streamKind, recent);
-        
-        const { OpenAI } = await import('openai');
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        
+        // Use improved prompts
+        const systemPrompt = HUMAN_PROMPTS[mode] || HUMAN_PROMPTS.funny;
         
         const resp = await openai.chat.completions.create({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: 'You generate natural, human-like single-line tasks for livestream overlays. Sound spontaneous, not scripted.' },
-            { role: 'user', content: prompt }
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: 'Generate ONE natural question:' }
           ],
           max_tokens: 60,
-          temperature: 0.95, // High creativity
-          presence_penalty: 0.6, // Avoid repetition
-          frequency_penalty: 0.7 // Encourage variety
+          temperature: 0.95,
+          presence_penalty: 0.6,
+          frequency_penalty: 0.7
         });
         
-        let rawText = resp.choices[0]?.message?.content || '';
-        text = sanitizeOutput(rawText);
-        text = humanizeText(text, mode);
+        text = sanitizeOneLine(resp.choices[0]?.message?.content || '');
         via = 'ai';
         console.log('[API] Generated human-like text:', text);
       } catch (e) {
