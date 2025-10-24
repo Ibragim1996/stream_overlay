@@ -118,17 +118,44 @@ async function saveRecentTask(key: string, task: string): Promise<void> {
   }
 }
 
-  // Fallback tasks with diverse content types - фокус на стримера
+  // Fallback tasks - ultra human-like
   const FALLBACK_TASKS = {
     funny: [
-      "hey, what's the weirdest food combo you actually love?",
-      "so tell us about your most awkward first date experience",
-      "okay, what's something you believed as a kid that was totally wrong?",
-      "listen, what's your most embarrassing autocorrect fail?",
-      "alright, describe your worst haircut ever in detail",
-      "check this, what's the strangest dream you've had recently?",
-      "real talk, what's your most irrational fear?",
-      "yo, what's something you're secretly terrible at?",
+      "yo chat, what's the most embarrassing thing you did this week?",
+      "bruh, rate your setup 1-10, be honest",
+      "quick question - pineapple on pizza, yes or nah?",
+      "what's your most controversial food take?",
+      "chat, describe your vibe in 3 words"
+    ],
+    motivator: [
+      "alright, let's see a quick stretch - you got this!",
+      "chat, drop some love for this legend real quick",
+      "you're doing amazing, keep that energy up!",
+      "let's go! show us that winning smile",
+      "quick check-in - how are you feeling today?"
+    ],
+    serious: [
+      "what's one thing you learned this week that mattered?",
+      "real talk - how do you handle burnout?",
+      "what skill are you currently trying to improve?",
+      "what's your biggest goal right now?",
+      "how do you stay motivated when things get tough?"
+    ],
+    chill: [
+      "so like, what's your comfort food right now?",
+      "what's your go-to late night snack?",
+      "if you could be anywhere right now, where would you be?",
+      "what's your favorite way to relax?",
+      "what song are you vibing to lately?"
+    ],
+    street: [
+      "yo chat, what's the most mid thing about this setup frfr?",
+      "lowkey wanna know - what's your most controversial take?",
+      "bruh, rate the fit 1-10, no cap be honest",
+      "deadass, what's your favorite thing to do right now?",
+      "frfr, if you could do anything today what would it be?"
+    ]
+  };
       "bruh, tell us about your most epic fail moment",
       "here's the thing, what's your weirdest habit?"
     ],
