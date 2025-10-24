@@ -208,9 +208,9 @@ export async function POST(req: NextRequest) {
     
     const raw = (await req.json().catch(() => ({}))) as Body;
     const overlayKey = (raw.overlayKey || '').trim();
-    const mode = (raw.mode || 'funny').trim();
+    const mode = (raw.mode || 'funny').trim() as Mode;
     const tone = (raw.tone || 'calm').trim();
-    const voiceId = (raw.voiceId || 'alloy').trim();
+    const voiceId = (raw.voiceId || 'alloy').trim() as VoiceId;
 
     console.log('[API] Request params:', { overlayKey: overlayKey ? 'present' : 'missing', mode, tone, voiceId });
 
@@ -219,35 +219,32 @@ export async function POST(req: NextRequest) {
       return json({ ok: false, error: 'overlay_key_missing' }, 400);
     }
 
-    // Check environment variables
-    const hasOpenAI = !!process.env.OPENAI_API_KEY;
-    const hasFirebase = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    const hasStorage = !!process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-    
-    console.log('[API] Environment check:', { hasOpenAI, hasFirebase, hasStorage });
-
-    // Rate limit per IP and per overlayKey
-    console.log('[API] Checking rate limits');
-    const okIP = await rateLimitIP(req, 3);
-    const okKey = await rateLimitKey(overlayKey, 2);
-    if (!okIP || !okKey) {
+    // Rate limiting
+    const allowed = await checkRateLimit(overlayKey);
+    if (!allowed) {
       console.log('[API] Rate limited');
-      return json({ ok: false, error: 'rate_limited' }, 429);
+      return json({ ok: false, error: 'Rate limit exceeded. Please wait a moment.' }, 429);
     }
 
-    // Generate text - try OpenAI first, fallback to predefined tasks
-    console.log('[API] Generating text');
+    // Get recent tasks to avoid repetition
+    const recent = await getRecentTasks(overlayKey);
+
+    // Generate text with OpenAI using human prompts
+    console.log('[API] Generating human-like task');
     let text = '';
-    let via = 'fallback';
+    let via: 'ai' | 'fallback' = 'fallback';
     
-    // Используем реальную генерацию от OpenAI с быстрыми настройками
+    const hasOpenAI = !!process.env.OPENAI_API_KEY;
+    
     if (hasOpenAI) {
       try {
-        console.log('[API] Generating human-like task with OpenAI');
+        // Use our improved human prompt system
+        const taskType: TaskType = 'question';
+        const streamKind: StreamKind = 'just_chatting';
+        const prompt = buildHumanPrompt(mode, taskType, streamKind, recent);
+        
         const { OpenAI } = await import('openai');
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        
-        // Создаем разнообразные промпты для избежания повторений
         const contentTypes = [
           'question', 'challenge', 'story_request', 'opinion', 'fact_share', 
           'confession', 'prediction', 'memory', 'hypothetical', 'debate'
