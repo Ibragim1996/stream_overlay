@@ -308,29 +308,6 @@ export async function POST(req: NextRequest) {
       voiceUrl = '';
     }
 
-    // Write to Firestore - try to save, but don't fail if unavailable
-    console.log('[API] Writing to Firestore');
-    if (hasFirebase) {
-      try {
-        const { getAdminDB } = await import('@/lib/firebaseAdmin');
-        const db = getAdminDB();
-        const ref = db.collection('overlays').doc(overlayKey).collection('state').doc('current');
-        await ref.set({ 
-          text, 
-          voiceUrl, 
-          mode, 
-          tone, 
-          updatedAt: new Date().toISOString() 
-        }, { merge: true });
-        console.log('[API] Written to Firestore');
-      } catch (e) {
-        console.error('[API] Firestore write error:', e);
-        // Don't fail the request if Firestore is unavailable
-      }
-    } else {
-      console.log('[API] Firestore not available, skipping database write');
-    }
-
     console.log('[API] Success, returning response');
     return json({ 
       ok: true, 
@@ -348,5 +325,7 @@ export async function POST(req: NextRequest) {
       error: e?.message || 'server_error',
       details: process.env.NODE_ENV === 'development' ? e.stack : undefined
     }, 500);
+  }
+}
   }
 }
