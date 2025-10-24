@@ -18,3 +18,7 @@ yarn-error.log*
 stripe.tar.gz
 *.tar.gz
 .vercel
+-e 
+# Environment files
+*.env
+*.env.*
