@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from 'openai';
-import { buildHumanPrompt, sanitizeOutput, humanizeText } from '@/lib/human-prompts';
-import { generateHumanTTS } from '@/lib/ultra-human-tts';
-import type { Mode, TaskType, StreamKind } from '@/lib/human-prompts';
-import type { VoiceId } from '@/lib/ultra-human-tts';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+// Human-like prompt types
+type Mode = 'funny' | 'motivator' | 'serious' | 'chill' | 'street';
+type VoiceId = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
 
 type Body = {
   overlayKey?: string;
