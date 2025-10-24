@@ -86,23 +86,11 @@ export default function SignInPage() {
         return;
       }
       
-      await signInWithPopup(auth, provider);
-      router.replace('/');
+      // Use redirect flow by default (works better with Chrome's third-party cookie restrictions)
+      await signInWithRedirect(auth, provider);
+      // Note: After redirect, user will be automatically signed in on return
     } catch (e: unknown) {
       const fe = e as FirebaseErr;
-
-      // Если попап закрыт/заблокирован — пробуем redirect поток
-      if (fe.code === 'auth/popup-closed-by-user' || fe.code === 'auth/popup-blocked') {
-        setInfo(friendly(fe.code));
-        const auth = getAuthClient();
-        if (!auth) {
-          setErr('Authentication service not available');
-          return;
-        }
-        await signInWithRedirect(auth, provider);
-        return;
-      }
-
       setErr(friendly(fe.code || fe.message || ''));
       setLoading(false);
     }
