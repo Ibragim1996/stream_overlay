@@ -292,25 +292,35 @@ export async function POST(req: NextRequest) {
     // Save to recent tasks
     await saveRecentTask(overlayKey, text);
 
-    // Generate TTS with ultra-human voice
-    console.log('[API] Generating ultra-human TTS');
+    // Generate TTS with improved voice
+    console.log('[API] Generating TTS');
     let voiceUrl = '';
     
     if (hasOpenAI) {
       try {
-        console.log('[API] Calling generateHumanTTS');
-        const ttsResult = await generateHumanTTS({
-          text,
-          mode,
-          voiceId
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        
+        // Select best voice for mode
+        const selectedVoice = voiceId || VOICE_MAPPING[mode];
+        const speed = SPEED_MAPPING[mode];
+        
+        console.log('[API] TTS params:', { voice: selectedVoice, speed, mode });
+        
+        const response = await openai.audio.speech.create({
+          model: 'tts-1-hd',
+          voice: selectedVoice as any,
+          input: text,
+          response_format: 'mp3',
+          speed: speed
         });
         
-        console.log('[API] TTS generated successfully, size:', ttsResult.audioBuffer.length);
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64Audio = buffer.toString('base64');
+        voiceUrl = `data:audio/mpeg;base64,${base64Audio}`;
         
-        // Convert to base64 data URL for inline playback
-        const base64Audio = ttsResult.audioBuffer.toString('base64');
-        voiceUrl = `data:${ttsResult.mime};base64,${base64Audio}`;
-        console.log('[API] Audio ready as data URL');
+        console.log('[API] TTS generated, size:', buffer.length);
+
 
       } catch (e) {
         console.error('[API] TTS synthesis error:', e);
