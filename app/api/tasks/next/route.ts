@@ -164,31 +164,8 @@ async function saveRecentTask(key: string, task: string): Promise<void> {
   }
 
 async function rateLimitIP(req: NextRequest, windowSec = 3) {
-  const tasks = FALLBACK_TASKS[mode as keyof typeof FALLBACK_TASKS] || FALLBACK_TASKS.funny;
-  
-  // Get recent tasks for this overlay
-  const recent = recentTasks.get(overlayKey) || [];
-  
-  // Filter out recent tasks
-  const availableTasks = tasks.filter(task => !recent.includes(task));
-  
-  // If all tasks were recent, reset the recent list
-  const taskPool = availableTasks.length > 0 ? availableTasks : tasks;
-  
-  // Pick random task
-  const selectedTask = taskPool[Math.floor(Math.random() * taskPool.length)];
-  
-  // Update recent tasks (keep last 5)
-  recentTasks.set(overlayKey, [...recent.slice(-4), selectedTask]);
-  
-  return selectedTask;
-}
-
-async function rateLimitIP(req: NextRequest, windowSec = 3) {
   try {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || (req as any).ip || '0.0.0.0';
-    // Simple in-memory rate limiting for development
-    // In production, use Redis
     return true; // Skip rate limiting for now
   } catch (e) {
     console.warn('Rate limiting error:', e);
@@ -198,8 +175,6 @@ async function rateLimitIP(req: NextRequest, windowSec = 3) {
 
 async function rateLimitKey(key: string, windowSec = 2) {
   try {
-    // Simple in-memory rate limiting for development
-    // In production, use Redis
     return true; // Skip rate limiting for now
   } catch (e) {
     console.warn('Rate limiting error:', e);
