@@ -156,48 +156,8 @@ async function saveRecentTask(key: string, task: string): Promise<void> {
       "frfr, if you could do anything today what would it be?"
     ]
   };
-      "bruh, tell us about your most epic fail moment",
-      "here's the thing, what's your weirdest habit?"
-    ],
-    serious: [
-      "so, what's a goal you're working towards this year?",
-      "listen, what's something you've learned about yourself recently?",
-      "alright, what's a challenge you're currently facing?",
-      "hey, what's something you're grateful for today?",
-      "okay, what's a skill you're trying to develop?",
-      "real talk, what's something that's been on your mind?",
-      "check this, what's a decision you're struggling with?",
-      "so, what's something you're proud of accomplishing?",
-      "listen, what's a habit you're trying to change?",
-      "alright, what's something you wish you knew earlier?"
-    ],
-    chill: [
-      "hey, what's your current mood and why?",
-      "so, what's something that made you smile today?",
-      "okay, describe your perfect lazy day",
-      "listen, what's your favorite way to relax?",
-      "alright, what's something you're looking forward to?",
-      "hey, what's your go-to comfort food?",
-      "so, what's your favorite time of day?",
-      "okay, what's something that always cheers you up?",
-      "listen, what's your ideal weekend plan?",
-      "alright, what's something you find peaceful?"
-    ],
-    street: [
-      "yo, what's your biggest flex this week?",
-      "check this, what's the coldest thing you've done today?",
-      "real talk, what's your most confident moment?",
-      "ay, tell us something that's straight fire about you",
-      "yo, what's your biggest win right now?",
-      "check this, what's something you're proud of?",
-      "real talk, what's your strongest skill?",
-      "ay, what's something that makes you feel powerful?",
-      "yo, what's your biggest achievement?",
-      "check this, what's something you're really good at?"
-    ],
-    hype: [
-      "let's go! what's got you excited today?",
-      "here we go! what's the most exciting thing happening?",
+
+  function getRandomTask(mode: string, overlayKey: string): string {
       "this is it! what's your biggest win this week?",
       "let's go! what's something that's absolutely fire?",
       "here we go! what's the most insane thing you've done?",
