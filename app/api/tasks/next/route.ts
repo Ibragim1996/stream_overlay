@@ -158,21 +158,12 @@ async function saveRecentTask(key: string, task: string): Promise<void> {
   };
 
   function getRandomTask(mode: string, overlayKey: string): string {
-      "this is it! what's your biggest win this week?",
-      "let's go! what's something that's absolutely fire?",
-      "here we go! what's the most insane thing you've done?",
-      "this is it! what's got you hyped right now?",
-      "let's go! what's the most exciting thing about you?",
-      "here we go! what's something that's wild?",
-      "this is it! what's the most thrilling thing you've experienced?",
-      "let's go! what's something that's absolutely crazy?"
-    ]
-  };
+    const normalizedMode = (['funny', 'motivator', 'serious', 'chill', 'street'].includes(mode) ? mode : 'funny') as Mode;
+    const tasks = FALLBACK_TASKS[normalizedMode];
+    return tasks[Math.floor(Math.random() * tasks.length)];
+  }
 
-// Simple in-memory cache to avoid recent repetitions
-const recentTasks = new Map<string, string[]>();
-
-function getRandomTask(mode: string, overlayKey: string): string {
+async function rateLimitIP(req: NextRequest, windowSec = 3) {
   const tasks = FALLBACK_TASKS[mode as keyof typeof FALLBACK_TASKS] || FALLBACK_TASKS.funny;
   
   // Get recent tasks for this overlay
