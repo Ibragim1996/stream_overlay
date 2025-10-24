@@ -15,6 +15,37 @@ type Body = {
   voiceId?: string;
 };
 
+// Improved human-like prompts with natural language
+const HUMAN_PROMPTS = {
+  funny: `You generate ONE engaging question for a livestream. Use natural internet slang: bruh, yo, lowkey, frfr, no cap. Sound like a real person talking casually. Keep it under 140 characters. Make it fun and relatable.`,
+  
+  motivator: `You generate ONE motivational question or challenge. Be supportive and energetic. Use phrases like "let's go", "you got this". Sound genuine and encouraging. Keep it under 140 characters.`,
+  
+  serious: `You generate ONE thoughtful question. Be direct and meaningful. No fluff. Sound mature and focused. Keep it under 140 characters.`,
+  
+  chill: `You generate ONE relaxed question. Sound laid-back and friendly, like talking to a friend. Use casual language. Keep it under 140 characters.`,
+  
+  street: `You generate ONE question using urban slang. Use: yo, bruh, frfr, no cap, lowkey, deadass, facts. Sound authentic and modern. Keep it under 140 characters.`
+};
+
+// Best voice for each mode
+const VOICE_MAPPING: Record<Mode, VoiceId> = {
+  funny: 'nova',
+  motivator: 'echo',
+  serious: 'onyx',
+  chill: 'shimmer',
+  street: 'echo'
+};
+
+// Speed for natural delivery
+const SPEED_MAPPING: Record<Mode, number> = {
+  funny: 1.08,
+  motivator: 1.12,
+  serious: 0.88,
+  chill: 0.85,
+  street: 1.10
+};
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
